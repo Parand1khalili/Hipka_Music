@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,6 +21,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+//        val properties = java.util.Properties()
+//        val propertiesFile = rootProject.file("local.properties")
+//        if (propertiesFile.exists()) {
+//            properties.load(propertiesFile.inputStream())
+//        }
+//        buildConfigField("String", "SUPABASE_URL", properties.getProperty("supabase.url", "\"\""))
+//        buildConfigField("String", "SUPABASE_KEY", properties.getProperty("supabase.key", "\"\""))
+
     }
 
     buildTypes {
@@ -39,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

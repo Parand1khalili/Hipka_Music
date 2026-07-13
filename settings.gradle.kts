@@ -51,5 +51,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "diaryapp"
+rootProject.name = "HipkaMusic"
 include(":app")
