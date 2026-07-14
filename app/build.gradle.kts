@@ -110,4 +110,10 @@ dependencies {
 
     // تبدیل اطلاعات شبکه و سرور به کدهای کاتلین (پشتیبانی از DTOهای جدول چت و پیام‌ها)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+    // وابستگی‌های سوپابیس برای چت آنلاین و اتصال به دیتابیس
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.2")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.2")
+    // موتور ارتباطی شبکه برای کارکرد صحیح وب‌ساکت و سوپابیس
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
+    implementation("io.ktor:ktor-client-cio:2.3.12")
 }
