@@ -37,10 +37,10 @@ import com.hipka.app.presentation.theme.HipkaTheme
 // آهنگ آزمایشی موقت — تا زمانی که تب جستجو/خانه لیست واقعی آهنگ‌ها را از Repository بگیرند
 private val testSong = Song(
     id = "test-song-1",
-    title = "Jazz in Paris",
-    artistName = "Media3 Sample",
+    title = "SoundHelix Song 1",
+    artistName = "SoundHelix",
     coverImageUrl = "https://picsum.photos/200",
-    audioUrl = "https://storage.googleapis.com/exoplayer-test-media-0/play.mp3"
+    audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 )
 
 @Composable
