@@ -1,4 +1,4 @@
-package com.hipka.app.data.local.database.entity
+package com.hipka.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

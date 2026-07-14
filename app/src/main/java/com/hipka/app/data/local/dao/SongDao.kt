@@ -1,7 +1,7 @@
-package com.hipka.app.data.local.database.dao
+package com.hipka.app.data.local.dao
 
 import androidx.room.*
-import com.hipka.app.data.local.database.entity.LocalSongEntity
+import com.hipka.app.data.local.entity.LocalSongEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

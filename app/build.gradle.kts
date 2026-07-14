@@ -1,6 +1,3 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,14 +20,21 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-//        val properties = java.util.Properties()
-//        val propertiesFile = rootProject.file("local.properties")
-//        if (propertiesFile.exists()) {
-//            properties.load(propertiesFile.inputStream())
-//        }
-//        buildConfigField("String", "SUPABASE_URL", properties.getProperty("supabase.url", "\"\""))
-//        buildConfigField("String", "SUPABASE_KEY", properties.getProperty("supabase.key", "\"\""))
+        val localPropFile = rootProject.file("local.properties")
+        var supabaseUrl = ""
+        var supabaseKey = ""
 
+        if (localPropFile.exists()) {
+            val lines = localPropFile.readLines()
+            supabaseUrl = lines.find { it.startsWith("supabase.url=") }?.substringAfter("=") ?: ""
+            supabaseKey = lines.find { it.startsWith("supabase.key=") }?.substringAfter("=") ?: ""
+        }
+
+        val finalUrl = "\"${supabaseUrl.trim().removeSurrounding("\"")}\""
+        val finalKey = "\"${supabaseKey.trim().removeSurrounding("\"")}\""
+
+        buildConfigField("String", "SUPABASE_URL", finalUrl)
+        buildConfigField("String", "SUPABASE_KEY", finalKey)
     }
 
     buildTypes {
@@ -110,4 +114,7 @@ dependencies {
 
     // تبدیل اطلاعات شبکه و سرور به کدهای کاتلین (پشتیبانی از DTOهای جدول چت و پیام‌ها)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+    // کتابخانه مبدل رتروفیت برای kotlinx.serialization
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+
 }
