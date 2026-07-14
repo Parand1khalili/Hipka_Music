@@ -4,6 +4,11 @@
     <!-- دسترسی حیاتی برای استریم موزیک و سوکت چت -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- دسترسی‌های موقت برای رفع باگ صدای بلوتوث در گوشی سامسونگ -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <application
         android:name=".HipkaApplication"
         android:allowBackup="true"
@@ -22,6 +27,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <!-- Person 2 adds the playback Service + MediaSession here (Sprint 2, B1). -->
         <!-- Person 3 adds any chat-related components here if needed (Sprint 2+, C2/C3). -->
     </application>
