@@ -1,4 +1,44 @@
 package com.hipka.app.presentation.features.player
 
-class PlayerViewModel {
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.hipka.app.domain.model.Song
+import com.hipka.app.domain.repository.PlayerRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class PlayerViewModel @Inject constructor(
+    private val playerRepository: PlayerRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(PlayerUiState())
+    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    fun onIntent(intent: PlayerIntent) {
+        when (intent) {
+            is PlayerIntent.PlaySong -> playSong(intent.song)
+            PlayerIntent.TogglePlayPause -> togglePlayPause()
+        }
+    }
+
+    private fun playSong(song: Song) {
+        viewModelScope.launch {
+            playerRepository.playSong(song)
+            _uiState.update { it.copy(currentSong = song, isPlaying = true) }
+        }
+    }
+
+    private fun togglePlayPause() {
+        viewModelScope.launch {
+            val isCurrentlyPlaying = _uiState.value.isPlaying
+            if (isCurrentlyPlaying) playerRepository.pause() else playerRepository.resume()
+            _uiState.update { it.copy(isPlaying = !isCurrentlyPlaying) }
+        }
+    }
 }
