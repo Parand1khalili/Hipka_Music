@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- دسترسی‌های موقت برای رفع باگ صدای بلوتوث در گوشی سامسونگ -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <application
         android:name=".HipkaApplication"
         android:allowBackup="true"
@@ -37,5 +42,6 @@
             </intent-filter>
         </service>
 
+        <!-- Person 3 adds any chat-related components here if needed (Sprint 2+, C2/C3). -->
     </application>
 </manifest>

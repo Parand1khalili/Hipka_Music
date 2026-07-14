@@ -43,6 +43,12 @@ private val testSong = Song(
     audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 )
 
+/**
+ * App-wide navigation graph. Screens are stubbed with [PlaceholderScreen] so
+ * the graph is runnable end-to-end from Sprint 1 — each teammate replaces
+ * their own `composable(...)` body with the real screen as it lands, without
+ * ever needing to touch this file's structure or the [Screen] routes.
+ */
 @Composable
 fun HipkaNavGraph(
     mainUiState: MainUiState,
@@ -72,46 +78,50 @@ fun HipkaNavGraph(
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            // --- مقصدهای منوی پایین صفحه --------------------------------
+            // --- Bottom nav destinations --------------------------------
             composable(Screen.Home.route) {
+                // Temporary until Person 1 (A3) lands the real Home screen with a live song list
                 HomePlaceholderScreen(
                     onPlayTestSong = { playerViewModel.onIntent(PlayerIntent.PlaySong(testSong)) }
                 )
             }
             composable(Screen.Search.route) {
-                PlaceholderScreen("Search")
+                PlaceholderScreen("Search") // Owner: Person 1 (A4)
             }
             composable(Screen.Downloads.route) {
-                PlaceholderScreen("Downloads")
+                PlaceholderScreen("Downloads") // Owner: Person 2 (B6)
             }
             composable(Screen.Playlists.route) {
-                PlaceholderScreen("Playlists")
+                PlaceholderScreen("Playlists") // Owner: Person 3 (C5)
             }
             composable(Screen.Profile.route) {
+                // Demo screen wired to MainViewModel so Design System +
+                // Navigation + Theme + Localization are verifiable right now,
+                // ahead of the real Profile screen (C5).
                 ProfilePlaceholderScreen(uiState = mainUiState, onIntent = onMainIntent)
             }
 
-            // --- مسیرهای فرعی و صفحات دیگر ----------------------------------
+            // --- Secondary destinations ----------------------------------
             composable(Screen.NowPlaying.route) {
-                PlaceholderScreen("Now Playing")
+                PlaceholderScreen("Now Playing") // Owner: Person 2 (B3/B4)
             }
             composable(Screen.Settings.route) {
-                PlaceholderScreen("Settings")
+                PlaceholderScreen("Settings") // Owner: Person 3 (C5)
             }
             composable(Screen.FollowedUsers.route) {
-                PlaceholderScreen("Followed Users")
+                PlaceholderScreen("Followed Users") // Owner: Person 3 (C5)
             }
             composable(Screen.LikedSongs.route) {
-                PlaceholderScreen("Liked Songs")
+                PlaceholderScreen("Liked Songs") // Owner: Person 1 (A5)
             }
             composable(Screen.RecentlyPlayed.route) {
-                PlaceholderScreen("Recently Played")
+                PlaceholderScreen("Recently Played") // Owner: Person 1 (A5)
             }
             composable(Screen.ChatList.route) {
-                PlaceholderScreen("Chats")
+                PlaceholderScreen("Chats") // Owner: Person 3 (C3)
             }
             composable(Screen.ChatConversation.route) {
-                PlaceholderScreen("Conversation")
+                PlaceholderScreen("Conversation") // Owner: Person 3 (C3)
             }
         }
     }
@@ -171,6 +181,14 @@ private fun PlaceholderScreen(title: String) {
     }
 }
 
+/**
+ * Temporary stand-in for the real Profile screen (C5). Lets anyone on the
+ * team confirm, before any other screen exists, that:
+ *  - switching language flips RTL/LTR live,
+ *  - switching theme mode recolors the whole app,
+ *  - both choices survive a process restart (via DataStore).
+ * Delete this composable once the real Profile screen (C5) lands.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfilePlaceholderScreen(
@@ -200,12 +218,12 @@ private fun ProfilePlaceholderScreen(
             FilterChip(
                 selected = uiState.languageCode == LocaleManager.LANGUAGE_ENGLISH,
                 onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_ENGLISH)) },
-                label = { Text(text = "English") } // 👈 طبق استاندارد: همیشه ثابت به زبان اصلی
+                label = { Text(text = "English") } // اصولی: همیشه ثابت به زبان اصلی
             )
             FilterChip(
                 selected = uiState.languageCode == LocaleManager.LANGUAGE_PERSIAN,
                 onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_PERSIAN)) },
-                label = { Text(text = "فارسی") } // 👈 طبق استاندارد: همیشه ثابت به زبان اصلی
+                label = { Text(text = "فارسی") } // اصولی: همیشه ثابت به زبان اصلی
             )
         }
 
