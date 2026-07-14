@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Hipka</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_downloads">Downloads</string>
+    <string name="nav_playlists">Playlists</string>
+    <string name="nav_profile">Profile</string>
+</resources>

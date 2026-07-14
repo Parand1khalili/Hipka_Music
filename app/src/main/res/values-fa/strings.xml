@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">هیپکا</string>
+
+    <string name="nav_home">خانه</string>
+    <string name="nav_search">جستجو</string>
+    <string name="nav_downloads">دانلودها</string>
+    <string name="nav_playlists">پلی\u200cلیست\u200cها</string>
+    <string name="nav_profile">پروفایل</string>
+
+    <string name="settings_title">تنظیمات</string>
+    <string name="settings_language">زبان</string>
+    <string name="settings_language_english">انگلیسی</string>
+    <string name="settings_language_persian">فارسی</string>
+    <string name="settings_theme">تم</string>
+    <string name="settings_theme_light">روشن</string>
+    <string name="settings_theme_dark">تاریک</string>
+    <string name="settings_theme_system">هماهنگ با سیستم</string>
+    <string name="settings_logout">خروج از حساب</string>
+
+    <string name="error_generic">مشکلی پیش آمد. دوباره تلاش کنید.</string>
+    <string name="error_no_internet">اتصال اینترنت برقرار نیست.</string>
+    <string name="empty_state_no_results">نتیجه\u200cای یافت نشد.</string>
+    <string name="loading">در حال بارگذاری…</string>
+</resources>

@@ -1,13 +1,22 @@
 package com.hipka.app.domain.model
 
-enum class MessageStatus { SENDING, SENT, READ }
+enum class MessageStatus {
+    SENDING,
+    SENT,
+    READ;
+
+    companion object {
+        fun fromRaw(value: String): MessageStatus =
+            entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: SENDING
+    }
+}
 
 data class Message(
     val id: String,
     val senderId: String,
     val receiverId: String,
     val text: String,
-    val timestamp: Long,
-    val status: MessageStatus,
-    val sharedSong: Song? = null // share song in chat
+    val status: MessageStatus = MessageStatus.SENDING,
+    val sharedSongId: String?,
+    val timestamp: Long
 )
