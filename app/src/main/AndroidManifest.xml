@@ -22,6 +22,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <!-- Person 2 adds the playback Service + MediaSession here (Sprint 2, B1). -->
+        <!-- Person 3 adds any chat-related components here if needed (Sprint 2+, C2/C3). -->
     </application>
 </manifest>
