@@ -22,4 +22,8 @@
     <string name="error_no_internet">اتصال اینترنت برقرار نیست.</string>
     <string name="empty_state_no_results">نتیجه\u200cای یافت نشد.</string>
     <string name="loading">در حال بارگذاری…</string>
+
+    <string name="player_play_cd">پخش</string>
+    <string name="player_pause_cd">توقف</string>
+    <string name="player_test_play_button">پخش آهنگ آزمایشی</string>
 </resources>

@@ -4,6 +4,11 @@
     <!-- دسترسی حیاتی برای استریم موزیک و سوکت چت -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- پخش موزیک در پس‌زمینه به صورت Foreground Service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- دسترسی‌های موقت برای رفع باگ صدای بلوتوث در گوشی سامسونگ -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
@@ -28,7 +33,15 @@
             </intent-filter>
         </activity>
 
-        <!-- Person 2 adds the playback Service + MediaSession here (Sprint 2, B1). -->
+        <service
+            android:name=".service.PlaybackService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
+
         <!-- Person 3 adds any chat-related components here if needed (Sprint 2+, C2/C3). -->
     </application>
 </manifest>

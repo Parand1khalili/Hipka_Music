@@ -25,4 +25,9 @@
     <string name="error_no_internet">No internet connection.</string>
     <string name="empty_state_no_results">No results found.</string>
     <string name="loading">Loading…</string>
+
+    <!-- Player -->
+    <string name="player_play_cd">Play</string>
+    <string name="player_pause_cd">Pause</string>
+    <string name="player_test_play_button">Play test song</string>
 </resources>
