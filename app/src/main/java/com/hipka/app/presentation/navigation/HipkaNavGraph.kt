@@ -3,17 +3,18 @@ package com.hipka.app.presentation.navigation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,22 +27,14 @@ import androidx.navigation.compose.rememberNavController
 import com.hipka.app.R
 import com.hipka.app.core.locale.LocaleManager
 import com.hipka.app.data.local.datastore.ThemeMode
-import com.hipka.app.domain.model.Song
+import com.hipka.app.presentation.features.home.HomeScreen
+import com.hipka.app.presentation.features.home.HomeViewModel
 import com.hipka.app.presentation.features.player.MiniPlayerBar
 import com.hipka.app.presentation.features.player.PlayerIntent
 import com.hipka.app.presentation.features.player.PlayerViewModel
 import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
-
-// آهنگ آزمایشی موقت — تا زمانی که تب جستجو/خانه لیست واقعی آهنگ‌ها را از Repository بگیرند
-private val testSong = Song(
-    id = "test-song-1",
-    title = "SoundHelix Song 1",
-    artistName = "SoundHelix",
-    coverImageUrl = "https://picsum.photos/200",
-    audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-)
 
 /**
  * App-wide navigation graph. Screens are stubbed with [PlaceholderScreen] so
@@ -58,7 +51,15 @@ fun HipkaNavGraph(
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.playbackErrors.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             Column {
                 playerUiState.currentSong?.let { song ->
@@ -80,9 +81,11 @@ fun HipkaNavGraph(
         ) {
             // --- Bottom nav destinations --------------------------------
             composable(Screen.Home.route) {
-                // Temporary until Person 1 (A3) lands the real Home screen with a live song list
-                HomePlaceholderScreen(
-                    onPlayTestSong = { playerViewModel.onIntent(PlayerIntent.PlaySong(testSong)) }
+                val homeViewModel: HomeViewModel = hiltViewModel()
+                val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                HomeScreen(
+                    uiState = homeUiState,
+                    onSongClick = { song -> playerViewModel.onIntent(PlayerIntent.PlaySong(song)) }
                 )
             }
             composable(Screen.Search.route) {
@@ -123,32 +126,6 @@ fun HipkaNavGraph(
             composable(Screen.ChatConversation.route) {
                 PlaceholderScreen("Conversation") // Owner: Person 3 (C3)
             }
-        }
-    }
-}
-
-@Composable
-private fun HomePlaceholderScreen(onPlayTestSong: () -> Unit) {
-    val isPersian = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "fa"
-    val comingSoonText = if (isPersian) "به‌زودی" else "coming soon"
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(HipkaTheme.dimens.spaceM),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "${stringResource(id = R.string.nav_home)} — $comingSoonText",
-            style = androidx.compose.material3.MaterialTheme.typography.titleMedium
-        )
-
-        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
-
-        // دکمه آزمایشی موقت برای تست پلیر تا زمانی که لیست واقعی آهنگ‌ها از Home/Search در دسترس باشد
-        Button(onClick = onPlayTestSong) {
-            Text(text = stringResource(id = R.string.player_test_play_button))
         }
     }
 }
