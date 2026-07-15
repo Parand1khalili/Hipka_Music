@@ -6,6 +6,7 @@ import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.PlayerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -20,6 +21,16 @@ class PlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
+    val playbackErrors: SharedFlow<String> = playerRepository.playbackErrors
+
+    init {
+        viewModelScope.launch {
+            playerRepository.isPlaying.collect { isPlaying ->
+                _uiState.update { it.copy(isPlaying = isPlaying) }
+            }
+        }
+    }
+
     fun onIntent(intent: PlayerIntent) {
         when (intent) {
             is PlayerIntent.PlaySong -> playSong(intent.song)
@@ -28,17 +39,15 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun playSong(song: Song) {
+        _uiState.update { it.copy(currentSong = song) }
         viewModelScope.launch {
             playerRepository.playSong(song)
-            _uiState.update { it.copy(currentSong = song, isPlaying = true) }
         }
     }
 
     private fun togglePlayPause() {
         viewModelScope.launch {
-            val isCurrentlyPlaying = _uiState.value.isPlaying
-            if (isCurrentlyPlaying) playerRepository.pause() else playerRepository.resume()
-            _uiState.update { it.copy(isPlaying = !isCurrentlyPlaying) }
+            if (_uiState.value.isPlaying) playerRepository.pause() else playerRepository.resume()
         }
     }
 }
