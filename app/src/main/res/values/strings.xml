@@ -29,5 +29,4 @@
     <!-- Player -->
     <string name="player_play_cd">Play</string>
     <string name="player_pause_cd">Pause</string>
-    <string name="player_test_play_button">Play test song</string>
 </resources>
