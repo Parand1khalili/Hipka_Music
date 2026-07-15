@@ -35,6 +35,7 @@ import com.hipka.app.presentation.features.player.PlayerViewModel
 import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
+import com.hipka.app.presentation.features.search.SearchScreen
 
 /**
  * App-wide navigation graph. Screens are stubbed with [PlaceholderScreen] so
@@ -89,7 +90,10 @@ fun HipkaNavGraph(
                 )
             }
             composable(Screen.Search.route) {
-                PlaceholderScreen("Search") // Owner: Person 1 (A4)
+                // implemented by: A - Search Screen Integration
+                SearchScreen(
+                    onSongClick = { song -> playerViewModel.onIntent(PlayerIntent.PlaySong(song)) }
+                )
             }
             composable(Screen.Downloads.route) {
                 PlaceholderScreen("Downloads") // Owner: Person 2 (B6)
