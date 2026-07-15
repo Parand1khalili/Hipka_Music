@@ -1,4 +1,246 @@
 package com.hipka.app.presentation.features.search
 
-class SearchScreen {
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.hipka.app.R
+import com.hipka.app.data.local.entity.SearchHistoryEntity
+import com.hipka.app.domain.model.Song
+import com.hipka.app.presentation.theme.HipkaTheme
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchScreen(
+    onSongClick: (Song) -> Unit,
+    viewModel: SearchViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(HipkaTheme.dimens.spaceM)
+    ) {
+        OutlinedTextField(
+            value = uiState.searchQuery,
+            onValueChange = { viewModel.onIntent(SearchIntent.QueryChanged(it)) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(stringResource(id = R.string.search_hint)) },
+            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (uiState.searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.onIntent(SearchIntent.ClearSearch) }) {
+                        Icon(imageVector = Icons.Default.Clear, contentDescription = null)
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(HipkaTheme.dimens.cornerM),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    viewModel.onIntent(SearchIntent.SearchSong(uiState.searchQuery))
+                    keyboardController?.hide()
+                }
+            )
+        )
+
+        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            FilterChip(
+                selected = uiState.selectedFilter == SearchFilter.ALL,
+                onClick = { viewModel.onIntent(SearchIntent.ChangeFilter(SearchFilter.ALL)) },
+                label = { Text(stringResource(id = R.string.search_filter_all)) }
+            )
+            FilterChip(
+                selected = uiState.selectedFilter == SearchFilter.SONG,
+                onClick = { viewModel.onIntent(SearchIntent.ChangeFilter(SearchFilter.SONG)) },
+                label = { Text(stringResource(id = R.string.search_filter_songs)) }
+            )
+            FilterChip(
+                selected = uiState.selectedFilter == SearchFilter.ARTIST,
+                onClick = { viewModel.onIntent(SearchIntent.ChangeFilter(SearchFilter.ARTIST)) },
+                label = { Text(stringResource(id = R.string.search_filter_artists)) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.searchQuery.isEmpty() && uiState.searchHistory.isNotEmpty() -> {
+                Text(
+                    text = stringResource(id = R.string.search_recent_searches),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = HipkaTheme.dimens.spaceS)
+                )
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(uiState.searchHistory, key = { it.query }) { historyItem ->
+                        SearchHistoryItem(
+                            item = historyItem,
+                            onClick = {
+                                viewModel.onIntent(SearchIntent.SearchSong(historyItem.query))
+                                keyboardController?.hide()
+                            },
+                            onDelete = { viewModel.onIntent(SearchIntent.DeleteHistoryItem(historyItem.query)) }
+                        )
+                    }
+                }
+            }
+
+            uiState.searchQuery.isEmpty() && uiState.searchHistory.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(id = R.string.search_type_to_search),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            uiState.hasSearchedBefore && uiState.searchResults.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(id = R.string.search_no_results_for, uiState.searchQuery),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
+                ) {
+                    items(uiState.searchResults, key = { it.id }) { song ->
+                        SearchResultItem(song = song, onClick = { onSongClick(song) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchHistoryItem(
+    item: SearchHistoryEntity,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = HipkaTheme.dimens.spaceS),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.History,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = item.query,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = HipkaTheme.dimens.spaceM)
+        )
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Default.DeleteOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchResultItem(song: Song, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
+            .clickable(onClick = onClick)
+            .padding(HipkaTheme.dimens.spaceS),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = song.coverImageUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .size(HipkaTheme.dimens.albumCoverS)
+                .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = HipkaTheme.dimens.spaceM)
+        ) {
+            Text(
+                text = song.title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = song.artistName,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
 }

@@ -1,4 +1,140 @@
 package com.hipka.app.presentation.features.search
 
-class SerachViewModel {
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.hipka.app.data.local.dao.SearchHistoryDao
+import com.hipka.app.data.local.entity.SearchHistoryEntity
+import com.hipka.app.domain.model.Song
+import com.hipka.app.domain.repository.SongRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+@HiltViewModel
+class SearchViewModel @Inject constructor(
+    private val songRepository: SongRepository,
+    private val searchHistoryDao: SearchHistoryDao
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(SearchUiState())
+    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+
+    private val searchQueryFlow = MutableStateFlow("")
+
+    init {
+        viewModelScope.launch {
+            searchHistoryDao.getSearchHistory().collect { history ->
+                _uiState.update { it.copy(searchHistory = history) }
+            }
+        }
+
+        viewModelScope.launch {
+            searchQueryFlow
+                .debounce(500L)
+                .distinctUntilChanged()
+                .filter { it.isNotBlank() }
+                .flatMapLatest { query ->
+                    _uiState.update { it.copy(isLoading = true, errorMessage = null, hasSearchedBefore = true) }
+
+                    flow {
+                        val results = songRepository.searchSongs(query)
+                        emit(results)
+                    }
+                }
+                .collect { rawResults ->
+                    // Save raw results and apply the current filter immediately
+                    _uiState.update { state ->
+                        state.copy(
+                            rawSearchResults = rawResults,
+                            searchResults = applyFilter(rawResults, state.selectedFilter, state.searchQuery),
+                            isLoading = false
+                        )
+                    }
+                }
+        }
+    }
+
+    fun onIntent(intent: SearchIntent) {
+        when (intent) {
+            is SearchIntent.QueryChanged -> handleQueryChanged(intent.query)
+            is SearchIntent.SearchSong -> executeExplicitSearch(intent.query)
+            SearchIntent.ClearSearch -> handleClearSearch()
+            is SearchIntent.ChangeFilter -> handleChangeFilter(intent.filter)
+            is SearchIntent.DeleteHistoryItem -> deleteHistoryItem(intent.query)
+        }
+    }
+
+    private fun handleQueryChanged(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        if (query.isBlank()) {
+            handleClearSearch()
+        } else {
+            searchQueryFlow.value = query
+        }
+    }
+
+    private fun executeExplicitSearch(query: String) {
+        if (query.isBlank()) return
+
+        _uiState.update { it.copy(searchQuery = query) }
+        searchQueryFlow.value = query
+
+        viewModelScope.launch {
+            searchHistoryDao.insertSearchQuery(
+                SearchHistoryEntity(query = query, timestamp = System.currentTimeMillis())
+            )
+        }
+    }
+
+    private fun handleClearSearch() {
+        _uiState.update {
+            it.copy(
+                searchQuery = "",
+                rawSearchResults = emptyList(),
+                searchResults = emptyList(),
+                isLoading = false,
+                errorMessage = null,
+                hasSearchedBefore = false
+            )
+        }
+        searchQueryFlow.value = ""
+    }
+
+    private fun handleChangeFilter(filter: SearchFilter) {
+        // Apply filter locally without making a new network request
+        _uiState.update { state ->
+            state.copy(
+                selectedFilter = filter,
+                searchResults = applyFilter(state.rawSearchResults, filter, state.searchQuery)
+            )
+        }
+    }
+
+    private fun applyFilter(songs: List<Song>, filter: SearchFilter, query: String): List<Song> {
+        if (query.isBlank()) return songs
+
+        return when (filter) {
+            SearchFilter.ALL -> songs
+            SearchFilter.SONG -> songs.filter { it.title.contains(query, ignoreCase = true) }
+            SearchFilter.ARTIST -> songs.filter { it.artistName.contains(query, ignoreCase = true) }
+        }
+    }
+
+    private fun deleteHistoryItem(query: String) {
+        viewModelScope.launch {
+            searchHistoryDao.deleteSearchQuery(query)
+        }
+    }
 }

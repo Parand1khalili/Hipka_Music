@@ -25,4 +25,13 @@
 
     <string name="player_play_cd">پخش</string>
     <string name="player_pause_cd">توقف</string>
+
+    <!-- Search screen -->
+    <string name="search_hint">جستجوی آهنگ یا خواننده...</string>
+    <string name="search_filter_all">همه</string>
+    <string name="search_filter_songs">آهنگ‌ها</string>
+    <string name="search_filter_artists">خواننده‌ها</string>
+    <string name="search_recent_searches">جستجوهای اخیر</string>
+    <string name="search_type_to_search">برای جستجوی موسیقی دلخواه خود تایپ کنید</string>
+    <string name="search_no_results_for">نتیجه‌ای برای \"%1$s\" یافت نشد</string>
 </resources>

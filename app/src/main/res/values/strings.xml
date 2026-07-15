@@ -29,4 +29,15 @@
     <!-- Player -->
     <string name="player_play_cd">Play</string>
     <string name="player_pause_cd">Pause</string>
+
+    <!-- Search screen -->
+    <string name="search_hint">Search songs or artists...</string>
+    <string name="search_filter_all">All</string>
+    <string name="search_filter_songs">Songs</string>
+    <string name="search_filter_artists">Artists</string>
+    <string name="search_recent_searches">Recent Searches</string>
+    <string name="search_type_to_search">Type to search for your favorite music</string>
+    <string name="search_no_results_for">No results found for \"%1$s\"</string>
+
+
 </resources>

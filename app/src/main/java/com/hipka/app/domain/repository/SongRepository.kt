@@ -6,4 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface SongRepository {
     fun getSongs(): Flow<List<Song>>
     suspend fun getSongById(id: String): Song?
+
+    // domain
+    suspend fun searchSongs(query: String): List<Song>
 }
