@@ -19,8 +19,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -31,6 +33,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +43,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -49,7 +55,9 @@ import com.hipka.app.presentation.theme.HipkaTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
+    likedSongIds: Set<String>,
     onSongClick: (Song) -> Unit,
+    onLikeClick: (Song) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -161,8 +169,17 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
                 ) {
-                    items(uiState.searchResults, key = { it.id }) { song ->
-                        SearchResultItem(song = song, onClick = { onSongClick(song) })
+                    // ترکیب وضعیت لایک از دیتابیس با نتایج سرچ
+                    val resultsWithLikeStatus = uiState.searchResults.map { song ->
+                        song.copy(isLiked = likedSongIds.contains(song.id))
+                    }
+
+                    items(resultsWithLikeStatus, key = { it.id }) { song ->
+                        SearchResultItem(
+                            song = song,
+                            onClick = { onSongClick(song) },
+                            onLikeClick = { onLikeClick(song) }
+                        )
                     }
                 }
             }
@@ -206,7 +223,11 @@ private fun SearchHistoryItem(
 }
 
 @Composable
-private fun SearchResultItem(song: Song, onClick: () -> Unit) {
+private fun SearchResultItem(
+    song: Song,
+    onClick: () -> Unit,
+    onLikeClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -226,7 +247,7 @@ private fun SearchResultItem(song: Song, onClick: () -> Unit) {
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = HipkaTheme.dimens.spaceM)
+                .padding(horizontal = HipkaTheme.dimens.spaceM)
         ) {
             Text(
                 text = song.title,
@@ -240,6 +261,18 @@ private fun SearchResultItem(song: Song, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // دکمه لایک تعاملی
+        IconButton(
+            onClick = onLikeClick,
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                imageVector = if (song.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = "Toggle Like",
+                tint = if (song.isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

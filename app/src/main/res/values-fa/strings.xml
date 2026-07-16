@@ -46,4 +46,11 @@
     <string name="home_section_local_playlists">پلی‌لیست‌های محلی</string>
     <string name="home_see_all"><![CDATA[مشاهده همه >]]></string>
     <string name="home_featured_today">پیشنهاد ویژه امروز</string>
+
+    <string name="liked_songs_title">آهنگ‌های پسندیده</string>
+    <string name="no_liked_songs">هنوز آهنگی را نپسندیده‌اید</string>
+    <string name="no_liked_songs_desc">آهنگ‌هایی که لایک می‌کنید اینجا نمایش داده می‌شوند.</string>
+    <string name="recently_played_title">اخیراً پخش شده</string>
+    <string name="no_recent_songs">تاریخچه پخش خالی است</string>
+    <string name="no_recent_songs_desc">آهنگ‌هایی که گوش می‌دهید اینجا ظاهر می‌شوند.</string>
 </resources>

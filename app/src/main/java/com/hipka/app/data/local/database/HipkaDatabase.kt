@@ -7,9 +7,10 @@ import com.hipka.app.data.local.dao.SongDao
 import com.hipka.app.data.local.entity.OfflineMessageEntity
 import com.hipka.app.data.local.entity.SearchHistoryEntity
 import com.hipka.app.data.local.entity.LocalSongEntity
+import com.hipka.app.data.local.entity.RecentSongEntity
 @Database(
-    entities = [LocalSongEntity::class, SearchHistoryEntity::class, OfflineMessageEntity::class],
-    version = 1,
+    entities = [LocalSongEntity::class, SearchHistoryEntity::class, OfflineMessageEntity::class, RecentSongEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class HipkaDatabase : RoomDatabase() {

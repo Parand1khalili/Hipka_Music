@@ -36,3 +36,10 @@ data class OfflineMessageEntity(
     val status: String,
     val sharedSongId: String?
 )
+
+// 4. recent songs
+@Entity(tableName = "recent_songs")
+data class RecentSongEntity(
+    @PrimaryKey val songId: String,
+    val timestamp: Long
+)

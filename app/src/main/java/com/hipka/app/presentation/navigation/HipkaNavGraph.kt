@@ -38,13 +38,10 @@ import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
 import com.hipka.app.presentation.features.search.SearchScreen
+import com.hipka.app.presentation.features.likedsongs.LikedSongsScreen
+import com.hipka.app.presentation.features.recent.RecentSongsScreen
+import com.hipka.app.presentation.main.SongInteractionViewModel
 
-/**
- * App-wide navigation graph. Screens are stubbed with [PlaceholderScreen] so
- * the graph is runnable end-to-end from Sprint 1 — each teammate replaces
- * their own `composable(...)` body with the real screen as it lands, without
- * ever needing to touch this file's structure or the [Screen] routes.
- */
 @Composable
 fun HipkaNavGraph(
     mainUiState: MainUiState,
@@ -54,13 +51,15 @@ fun HipkaNavGraph(
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
 
+    val songInteractionViewModel: SongInteractionViewModel = hiltViewModel()
+
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(playerViewModel) {
         playerViewModel.playbackErrors.collect { message ->
             snackbarHostState.showSnackbar(message)
         }
     }
-
+    val likedSongIds by songInteractionViewModel.likedSongIds.collectAsStateWithLifecycle()
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -90,23 +89,21 @@ fun HipkaNavGraph(
 
                 HomeScreen(
                     uiState = homeUiState,
-                    onSongClick = { song -> playerViewModel.onIntent(PlayerIntent.PlaySong(song)) },
+                    likedSongIds = likedSongIds, // ارسال لیست به صفحه
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onLikeClick = { song -> // حالا به جای آیدی، خود آهنگ را می‌فرستیم
+                        songInteractionViewModel.toggleLike(song)
+                    },
                     onRefresh = { homeViewModel.onIntent(HomeIntent.RefreshHome) },
                     onQuickActionClick = { action ->
                         when (action) {
-                            "liked" -> {
-                                // نمونه: هدایت به صفحه لایک شده‌ها (یا نمایش توست اگر برنچش هنوز ادغام نشده)
-                                android.widget.Toast.makeText(context, "Navigating to Liked Songs...", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            "recent" -> {
-                                android.widget.Toast.makeText(context, "Opening Recently Played...", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            "playlists" -> {
-                                navController.navigate(Screen.Playlists.route)
-                            }
-                            "artists" -> {
-                                android.widget.Toast.makeText(context, "Opening Top Artists...", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+                            "liked" -> navController.navigate(Screen.LikedSongs.route)
+                            "recent" -> navController.navigate(Screen.RecentlyPlayed.route)
+                            "playlists" -> navController.navigate(Screen.Playlists.route)
+                            "artists" -> android.widget.Toast.makeText(context, "Opening Top Artists...", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onSeeAllClick = { section ->
@@ -114,7 +111,7 @@ fun HipkaNavGraph(
                     }
                 )
             }
-            // اضافه کردن صفحه‌ی See all به گراف نویگیشن
+
             composable(
                 route = "see_all/{section}",
                 arguments = listOf(androidx.navigation.navArgument("section") { type = androidx.navigation.NavType.StringType })
@@ -125,47 +122,52 @@ fun HipkaNavGraph(
                     onBackClick = { navController.popBackStack() }
                 )
             }
+
             composable(Screen.Search.route) {
-                // implemented by: A - Search Screen Integration
                 SearchScreen(
-                    onSongClick = { song -> playerViewModel.onIntent(PlayerIntent.PlaySong(song)) }
+                    likedSongIds = likedSongIds,
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onLikeClick = { song ->
+                        songInteractionViewModel.toggleLike(song)
+                    }
                 )
             }
-            composable(Screen.Downloads.route) {
-                PlaceholderScreen("Downloads") // Owner: Person 2 (B6)
-            }
-            composable(Screen.Playlists.route) {
-                PlaceholderScreen("Playlists") // Owner: Person 3 (C5)
-            }
-            composable(Screen.Profile.route) {
-                // Demo screen wired to MainViewModel so Design System +
-                // Navigation + Theme + Localization are verifiable right now,
-                // ahead of the real Profile screen (C5).
-                ProfilePlaceholderScreen(uiState = mainUiState, onIntent = onMainIntent)
-            }
+
+            composable(Screen.Downloads.route) { PlaceholderScreen("Downloads") }
+            composable(Screen.Playlists.route) { PlaceholderScreen("Playlists") }
+            composable(Screen.Profile.route) { ProfilePlaceholderScreen(uiState = mainUiState, onIntent = onMainIntent) }
 
             // --- Secondary destinations ----------------------------------
-            composable(Screen.NowPlaying.route) {
-                PlaceholderScreen("Now Playing") // Owner: Person 2 (B3/B4)
-            }
-            composable(Screen.Settings.route) {
-                PlaceholderScreen("Settings") // Owner: Person 3 (C5)
-            }
-            composable(Screen.FollowedUsers.route) {
-                PlaceholderScreen("Followed Users") // Owner: Person 3 (C5)
-            }
+            composable(Screen.NowPlaying.route) { PlaceholderScreen("Now Playing") }
+            composable(Screen.Settings.route) { PlaceholderScreen("Settings") }
+            composable(Screen.FollowedUsers.route) { PlaceholderScreen("Followed Users") }
+
+            // صفحات اسپرینت ۳
             composable(Screen.LikedSongs.route) {
-                PlaceholderScreen("Liked Songs") // Owner: Person 1 (A5)
+                LikedSongsScreen(
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
+
             composable(Screen.RecentlyPlayed.route) {
-                PlaceholderScreen("Recently Played") // Owner: Person 1 (A5)
+                RecentSongsScreen(
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
-            composable(Screen.ChatList.route) {
-                PlaceholderScreen("Chats") // Owner: Person 3 (C3)
-            }
-            composable(Screen.ChatConversation.route) {
-                PlaceholderScreen("Conversation") // Owner: Person 3 (C3)
-            }
+
+            composable(Screen.ChatList.route) { PlaceholderScreen("Chats") }
+            composable(Screen.ChatConversation.route) { PlaceholderScreen("Conversation") }
         }
     }
 }
@@ -198,14 +200,6 @@ private fun PlaceholderScreen(title: String) {
     }
 }
 
-/**
- * Temporary stand-in for the real Profile screen (C5). Lets anyone on the
- * team confirm, before any other screen exists, that:
- *  - switching language flips RTL/LTR live,
- *  - switching theme mode recolors the whole app,
- *  - both choices survive a process restart (via DataStore).
- * Delete this composable once the real Profile screen (C5) lands.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfilePlaceholderScreen(
@@ -222,48 +216,17 @@ private fun ProfilePlaceholderScreen(
             .padding(HipkaTheme.dimens.spaceM),
         verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM)
     ) {
-        Text(
-            text = "$profileTitle — $comingSoonText",
-            style = androidx.compose.material3.MaterialTheme.typography.headlineMedium
-        )
-
-        Text(
-            text = stringResource(id = R.string.settings_language),
-            style = androidx.compose.material3.MaterialTheme.typography.titleMedium
-        )
+        Text(text = "$profileTitle — $comingSoonText", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
+        Text(text = stringResource(id = R.string.settings_language), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
-            FilterChip(
-                selected = uiState.languageCode == LocaleManager.LANGUAGE_ENGLISH,
-                onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_ENGLISH)) },
-                label = { Text(text = "English") } // اصولی: همیشه ثابت به زبان اصلی
-            )
-            FilterChip(
-                selected = uiState.languageCode == LocaleManager.LANGUAGE_PERSIAN,
-                onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_PERSIAN)) },
-                label = { Text(text = "فارسی") } // اصولی: همیشه ثابت به زبان اصلی
-            )
+            FilterChip(selected = uiState.languageCode == LocaleManager.LANGUAGE_ENGLISH, onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_ENGLISH)) }, label = { Text(text = "English") })
+            FilterChip(selected = uiState.languageCode == LocaleManager.LANGUAGE_PERSIAN, onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_PERSIAN)) }, label = { Text(text = "فارسی") })
         }
-
-        Text(
-            text = stringResource(id = R.string.settings_theme),
-            style = androidx.compose.material3.MaterialTheme.typography.titleMedium
-        )
+        Text(text = stringResource(id = R.string.settings_theme), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
-            FilterChip(
-                selected = uiState.themeMode == ThemeMode.LIGHT,
-                onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.LIGHT)) },
-                label = { Text(text = stringResource(id = R.string.settings_theme_light)) }
-            )
-            FilterChip(
-                selected = uiState.themeMode == ThemeMode.DARK,
-                onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.DARK)) },
-                label = { Text(text = stringResource(id = R.string.settings_theme_dark)) }
-            )
-            FilterChip(
-                selected = uiState.themeMode == ThemeMode.SYSTEM,
-                onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.SYSTEM)) },
-                label = { Text(text = stringResource(id = R.string.settings_theme_system)) }
-            )
+            FilterChip(selected = uiState.themeMode == ThemeMode.LIGHT, onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.LIGHT)) }, label = { Text(text = stringResource(id = R.string.settings_theme_light)) })
+            FilterChip(selected = uiState.themeMode == ThemeMode.DARK, onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.DARK)) }, label = { Text(text = stringResource(id = R.string.settings_theme_dark)) })
+            FilterChip(selected = uiState.themeMode == ThemeMode.SYSTEM, onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.SYSTEM)) }, label = { Text(text = stringResource(id = R.string.settings_theme_system)) })
         }
     }
 }

@@ -1,11 +1,14 @@
 package com.hipka.app.data.repository
 
 import com.hipka.app.data.local.dao.SongDao
+import com.hipka.app.data.local.entity.LocalSongEntity
+import com.hipka.app.data.local.entity.RecentSongEntity
 import com.hipka.app.data.remote.api.SongApi
 import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.SongRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class SongRepositoryImpl @Inject constructor(
@@ -51,18 +54,7 @@ class SongRepositoryImpl @Inject constructor(
     override suspend fun getSongById(id: String): Song? {
         val localSong = songDao.getSongById(id)
         if (localSong != null) {
-            return Song(
-                id = localSong.id,
-                title = localSong.title,
-                artistName = localSong.artistName,
-                coverImageUrl = localSong.coverImageUrl,
-                audioUrl = localSong.audioUrl,
-                playCount = localSong.playCount,
-                releaseDate = localSong.releaseDate,
-                isLiked = localSong.isLiked,
-                isDownloaded = localSong.isDownloaded,
-                localFilePath = localSong.localFilePath
-            )
+            return localSong.toDomainModel()
         }
         return null
         // UNCOMMENT FOR OFFLINE TESTING:
@@ -95,6 +87,96 @@ class SongRepositoryImpl @Inject constructor(
                 it.artistName.contains(query, ignoreCase = true)
             }
             */
+        }
+    }
+
+
+    override fun getLikedSongs(): Flow<List<Song>> {
+        return songDao.getLikedSongs().map { localSongs ->
+            localSongs.map { it.toDomainModel() }
+        }
+    }
+
+    override fun getRecentlyPlayedSongs(): Flow<List<Song>> {
+        return songDao.getRecentlyPlayedSongs().map { localSongs ->
+            localSongs.map { it.toDomainModel() }
+        }
+    }
+
+    override suspend fun toggleLike(songId: String) {
+        val song = songDao.getSongById(songId)
+        if (song != null) {
+            songDao.updateLikeStatus(songId, !song.isLiked)
+        }
+    }
+
+    override suspend fun addToRecentlyPlayed(song: Song) {
+        val existingSong = songDao.getSongById(song.id)
+        if (existingSong == null) {
+            songDao.insertSong(
+                LocalSongEntity(
+                    id = song.id,
+                    title = song.title,
+                    artistName = song.artistName,
+                    coverImageUrl = song.coverImageUrl,
+                    audioUrl = song.audioUrl,
+                    playCount = song.playCount,
+                    releaseDate = song.releaseDate,
+                    isLiked = song.isLiked,
+                    isDownloaded = song.isDownloaded,
+                    localFilePath = song.localFilePath
+                )
+            )
+        }
+
+        val recentSong = RecentSongEntity(
+            songId = song.id,
+            timestamp = System.currentTimeMillis()
+        )
+        songDao.insertRecentSong(recentSong)
+    }
+
+    // متد کمکی برای جلوگیری از تکرار کد و مپ کردن تمیز Entity به Model
+    private fun LocalSongEntity.toDomainModel(): Song {
+        return Song(
+            id = id,
+            title = title,
+            artistName = artistName,
+            coverImageUrl = coverImageUrl,
+            audioUrl = audioUrl,
+            playCount = playCount,
+            releaseDate = releaseDate,
+            isLiked = isLiked,
+            isDownloaded = isDownloaded,
+            localFilePath = localFilePath
+        )
+    }
+
+    override fun observeLikedSongIds(): Flow<List<String>> {
+        return songDao.getLikedSongIds()
+    }
+
+    override suspend fun toggleAndInsertLike(song: Song) {
+        val existingSong = songDao.getSongById(song.id)
+        if (existingSong != null) {
+            // اگر آهنگ قبلاً در دیتابیس بود، وضعیتش را برعکس کن
+            songDao.updateLikeStatus(song.id, !existingSong.isLiked)
+        } else {
+            // اگر آهنگ از اینترنت آمده بود و در دیتابیس نبود، آن را ثبت و لایک کن
+            songDao.insertSong(
+                LocalSongEntity(
+                    id = song.id,
+                    title = song.title,
+                    artistName = song.artistName,
+                    coverImageUrl = song.coverImageUrl,
+                    audioUrl = song.audioUrl,
+                    playCount = song.playCount,
+                    releaseDate = song.releaseDate,
+                    isLiked = true,
+                    isDownloaded = song.isDownloaded,
+                    localFilePath = song.localFilePath
+                )
+            )
         }
     }
 }

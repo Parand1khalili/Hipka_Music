@@ -51,5 +51,12 @@
     <string name="home_see_all">See all ></string>
     <string name="home_featured_today">FEATURED TODAY</string>
 
+    <string name="liked_songs_title">Liked Songs</string>
+    <string name="no_liked_songs">No Liked Songs Yet</string>
+    <string name="no_liked_songs_desc">Songs you like will appear here so you can listen to them later.</string>
+    <string name="recently_played_title">Recently Played</string>
+    <string name="no_recent_songs">No Listening History</string>
+    <string name="no_recent_songs_desc">Songs you listen to will appear here.</string>
+
 
 </resources>

@@ -27,12 +27,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.FavoriteBorder // ایمپورت جدید برای قلب توخالی
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,15 +61,20 @@ import com.hipka.app.presentation.theme.HipkaTheme
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    likedSongIds: Set<String>, // اضافه شد
     onSongClick: (Song) -> Unit,
     onRefresh: () -> Unit,
     onQuickActionClick: (String) -> Unit,
     onSeeAllClick: (String) -> Unit,
+    onLikeClick: (Song) -> Unit, // تغییر به Song
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { onRefresh() }
@@ -101,21 +106,18 @@ fun HomeScreen(
                 // 1. Top App Bar
                 item { HomeTopBar() }
 
-                // 2. Featured Carousel Pager (اسلایدر افقی متحرک واقعی و استاندارد)
-                // 2. Featured Carousel Pager (اسلایدر افقی متحرک واقعی)
+                // 2. Featured Carousel Pager
                 if (uiState.carouselSongs.isNotEmpty()) {
                     item {
                         val pagerState = rememberPagerState(pageCount = { uiState.carouselSongs.size })
                         val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
 
-                        // چرخش خودکار نرم، پیوسته و بدون گیر کردن
-                        if (uiState.carouselSongs.size > 1) { // فقط اگر بیشتر از یک عکس داریم بچرخد
-                            LaunchedEffect(isDragged) { // فقط زمانی ری‌استارت شود که کاربر دستش را روی صفحه می‌کشد
+                        if (uiState.carouselSongs.size > 1) {
+                            LaunchedEffect(isDragged) {
                                 if (!isDragged) {
-                                    while (true) { // حلقه‌ی بی‌نهایت برای چرخش
+                                    while (true) {
                                         delay(3500L)
                                         val nextPage = (pagerState.currentPage + 1) % uiState.carouselSongs.size
-                                        // اجرای انیمیشن تا پایان (بدون قطع شدن)
                                         pagerState.animateScrollToPage(
                                             page = nextPage,
                                             animationSpec = tween(
@@ -142,7 +144,6 @@ fun HomeScreen(
                                 )
                             }
 
-                            //  (Indicators)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -182,7 +183,12 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        SongHorizontalList(songs = uiState.popularSongs, onSongClick = onSongClick)
+                        // آپدیت: onLikeClick به لیست افقی پاس داده می‌شود
+                        SongHorizontalList(
+                            songs = uiState.popularSongs.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
+                            onSongClick = onSongClick,
+                            onLikeClick = onLikeClick
+                        )
                     }
                 }
 
@@ -195,7 +201,12 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        SongHorizontalList(songs = uiState.newReleases, onSongClick = onSongClick)
+                        // آپدیت: onLikeClick به لیست افقی پاس داده می‌شود
+                        SongHorizontalList(
+                            songs = uiState.newReleases.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
+                            onSongClick = onSongClick,
+                            onLikeClick = onLikeClick
+                        )
                     }
                 }
 
@@ -417,19 +428,33 @@ private fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
 }
 
 @Composable
-private fun SongHorizontalList(songs: List<Song>, onSongClick: (Song) -> Unit) {
+private fun SongHorizontalList(
+    songs: List<Song>,
+    onSongClick: (Song) -> Unit,
+    // آپدیت مهم: اینجا String به Song تغییر کرد تا ارور رفع شود
+    onLikeClick: (Song) -> Unit
+) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = HipkaTheme.dimens.spaceM),
         horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM)
     ) {
         items(songs, key = { it.id + "_square" }) { song ->
-            SquareSongCard(song = song, onClick = { onSongClick(song) })
+            SquareSongCard(
+                song = song,
+                onClick = { onSongClick(song) },
+                onLikeClick = { onLikeClick(song) } // ارسال کل آهنگ
+            )
         }
     }
 }
 
 @Composable
-private fun SquareSongCard(song: Song, onClick: () -> Unit) {
+private fun SquareSongCard(
+    song: Song,
+    onClick: () -> Unit,
+    onLikeClick: () -> Unit
+) {
+    // هک isLikedLocal به طور کامل پاک شد. حالا دیتابیس به صورت زنده این را کنترل می‌کند.
     Column(
         modifier = Modifier
             .width(140.dp)
@@ -464,16 +489,18 @@ private fun SquareSongCard(song: Song, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More options",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
+
+            // خواندن مستقیم وضعیت لایک از دیتابیس (بدون تاخیر)
+            IconButton(onClick = onLikeClick, modifier = Modifier.size(24.dp)) {
+                Icon(
+                    imageVector = if (song.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = "Toggle Like",
+                    tint = if (song.isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
-
 @Composable
 private fun PlaylistHorizontalList(playlists: List<Playlist>, onClick: (Playlist) -> Unit) {
     LazyRow(
