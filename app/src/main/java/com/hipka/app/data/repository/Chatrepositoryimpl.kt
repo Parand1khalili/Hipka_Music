@@ -1,49 +1,39 @@
 package com.hipka.app.data.repository
 
+import com.hipka.app.data.remote.api.MessageApi
 import com.hipka.app.data.remote.dto.MessageDto
 import com.hipka.app.data.remote.dto.toDomain
 import com.hipka.app.domain.model.Message
 import com.hipka.app.domain.repository.ChatRepository
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
-import io.github.jan.supabase.realtime.decodeRecord
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
 import javax.inject.Inject
+import io.github.jan.supabase.realtime.decodeRecord
 
+/**
+ * Regular reads/writes go through Retrofit (MessageApi), matching every
+ * other table in the app. Retrofit fundamentally can't do a WebSocket
+ * subscription, so [observeIncomingMessages] alone uses supabase-kt's
+ * Realtime client (see NetworkModule) — the one place in the app that needs
+ * it, to satisfy the "DM must be WebSocket, no polling" requirement.
+ */
 class ChatRepositoryImpl @Inject constructor(
+    private val messageApi: MessageApi,
     private val supabaseClient: SupabaseClient
 ) : ChatRepository {
 
     override suspend fun getConversationHistory(myUserId: String, peerUserId: String): List<Message> {
-        val sentByMe = supabaseClient.from("messages")
-            .select {
-                filter {
-                    eq("sender_id", myUserId)
-                    eq("receiver_id", peerUserId)
-                }
-            }
-            .decodeList<MessageDto>()
-
-        val sentByPeer = supabaseClient.from("messages")
-            .select {
-                filter {
-                    eq("sender_id", peerUserId)
-                    eq("receiver_id", myUserId)
-                }
-            }
-            .decodeList<MessageDto>()
-
-        return (sentByMe + sentByPeer)
-            .sortedBy { it.timestamp }
-            .map { it.toDomain() }
+        val orQuery = "(and(sender_id.eq.$myUserId,receiver_id.eq.$peerUserId)," +
+                "and(sender_id.eq.$peerUserId,receiver_id.eq.$myUserId))"
+        return messageApi.getConversation(orQuery = orQuery).map { it.toDomain() }
     }
 
     override suspend fun sendMessage(
@@ -52,6 +42,8 @@ class ChatRepositoryImpl @Inject constructor(
         text: String,
         sharedSongId: String?
     ): Message {
+        // Client-generated id lets the UI de-duplicate against whatever
+        // Realtime echoes back for this same row.
         val dto = MessageDto(
             id = UUID.randomUUID().toString(),
             senderId = myUserId,
@@ -61,7 +53,7 @@ class ChatRepositoryImpl @Inject constructor(
             sharedSongId = sharedSongId,
             timestamp = System.currentTimeMillis()
         )
-        supabaseClient.from("messages").insert(dto)
+        messageApi.sendMessage(dto)
         return dto.toDomain()
     }
 
@@ -75,12 +67,7 @@ class ChatRepositoryImpl @Inject constructor(
 
         val collectJob = launch {
             changes.collect { action ->
-                try {
-                    val messageDto = action.decodeRecord<MessageDto>()
-                    trySend(messageDto.toDomain())
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                trySend(action.decodeRecord<MessageDto>().toDomain())
             }
         }
 
@@ -88,6 +75,8 @@ class ChatRepositoryImpl @Inject constructor(
 
         awaitClose {
             collectJob.cancel()
+            // unsubscribe() is suspend in most supabase-kt versions; this is a
+            // short, best-effort cleanup call from a non-suspend callback.
             runBlocking { channel.unsubscribe() }
         }
     }

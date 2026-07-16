@@ -34,5 +34,6 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSearchHistoryDao(database: HipkaDatabase): SearchHistoryDao = database.searchHistoryDao
+    fun provideSearchHistoryDao(database: HipkaDatabase): SearchHistoryDao =
+        database.searchHistoryDao
 }

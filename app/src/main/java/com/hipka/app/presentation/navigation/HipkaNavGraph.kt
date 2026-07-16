@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -17,16 +16,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.hipka.app.R
-import com.hipka.app.core.locale.LocaleManager
-import com.hipka.app.data.local.datastore.ThemeMode
 import com.hipka.app.presentation.features.home.HomeIntent
 import com.hipka.app.presentation.features.home.HomeScreen
 import com.hipka.app.presentation.features.home.HomeViewModel
@@ -34,13 +34,18 @@ import com.hipka.app.presentation.features.home.SeeAllScreen
 import com.hipka.app.presentation.features.player.MiniPlayerBar
 import com.hipka.app.presentation.features.player.PlayerIntent
 import com.hipka.app.presentation.features.player.PlayerViewModel
-import com.hipka.app.presentation.main.MainIntent
-import com.hipka.app.presentation.main.MainUiState
-import com.hipka.app.presentation.theme.HipkaTheme
 import com.hipka.app.presentation.features.search.SearchScreen
+import com.hipka.app.presentation.features.playlists.PlaylistsScreen
+import com.hipka.app.presentation.features.profile.ProfileScreen
+import com.hipka.app.presentation.features.followedusers.FollowedUsersScreen
+import com.hipka.app.presentation.features.chat.ChatScreen
 import com.hipka.app.presentation.features.likedsongs.LikedSongsScreen
 import com.hipka.app.presentation.features.recent.RecentSongsScreen
 import com.hipka.app.presentation.main.SongInteractionViewModel
+import com.hipka.app.presentation.main.MainIntent
+import com.hipka.app.presentation.main.MainUiState
+import com.hipka.app.presentation.theme.HipkaTheme
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun HipkaNavGraph(
@@ -60,6 +65,7 @@ fun HipkaNavGraph(
         }
     }
     val likedSongIds by songInteractionViewModel.likedSongIds.collectAsStateWithLifecycle()
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -89,12 +95,12 @@ fun HipkaNavGraph(
 
                 HomeScreen(
                     uiState = homeUiState,
-                    likedSongIds = likedSongIds, // ارسال لیست به صفحه
+                    likedSongIds = likedSongIds,
                     onSongClick = { song ->
                         songInteractionViewModel.addToRecentlyPlayed(song)
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
                     },
-                    onLikeClick = { song -> // حالا به جای آیدی، خود آهنگ را می‌فرستیم
+                    onLikeClick = { song ->
                         songInteractionViewModel.toggleLike(song)
                     },
                     onRefresh = { homeViewModel.onIntent(HomeIntent.RefreshHome) },
@@ -114,7 +120,7 @@ fun HipkaNavGraph(
 
             composable(
                 route = "see_all/{section}",
-                arguments = listOf(androidx.navigation.navArgument("section") { type = androidx.navigation.NavType.StringType })
+                arguments = listOf(navArgument("section") { type = NavType.StringType })
             ) { backStackEntry ->
                 val section = backStackEntry.arguments?.getString("section") ?: ""
                 SeeAllScreen(
@@ -137,15 +143,34 @@ fun HipkaNavGraph(
             }
 
             composable(Screen.Downloads.route) { PlaceholderScreen("Downloads") }
-            composable(Screen.Playlists.route) { PlaceholderScreen("Playlists") }
-            composable(Screen.Profile.route) { ProfilePlaceholderScreen(uiState = mainUiState, onIntent = onMainIntent) }
+            composable(Screen.Playlists.route) {
+                PlaylistsScreen(
+                    onPlaylistClick = { playlistId ->
+                        // نویگیشن به صفحه جزئیات پلی‌لیست در اسپرینت ۳ در صورت نیاز
+                    }
+                )
+            }
+
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    mainUiState = mainUiState,
+                    onMainIntent = onMainIntent,
+                    onNavigateToFollowedUsers = { navController.navigate(Screen.FollowedUsers.route) }
+                )
+            }
 
             // --- Secondary destinations ----------------------------------
             composable(Screen.NowPlaying.route) { PlaceholderScreen("Now Playing") }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }
-            composable(Screen.FollowedUsers.route) { PlaceholderScreen("Followed Users") }
 
-            // صفحات اسپرینت ۳
+            composable(Screen.FollowedUsers.route) {
+                FollowedUsersScreen(
+                    onOpenChat = { peerId ->
+                        navController.navigate(Screen.ChatConversation.createRoute(peerId))
+                    }
+                )
+            }
+
             composable(Screen.LikedSongs.route) {
                 LikedSongsScreen(
                     onSongClick = { song ->
@@ -167,7 +192,13 @@ fun HipkaNavGraph(
             }
 
             composable(Screen.ChatList.route) { PlaceholderScreen("Chats") }
-            composable(Screen.ChatConversation.route) { PlaceholderScreen("Conversation") }
+
+            composable(
+                route = Screen.ChatConversation.route,
+                arguments = listOf(navArgument(Screen.ChatConversation.ARG_PEER_USER_ID) { type = NavType.StringType })
+            ) {
+                ChatScreen()
+            }
         }
     }
 }
@@ -183,7 +214,7 @@ private fun PlaceholderScreen(title: String) {
         else -> title
     }
 
-    val isPersian = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "fa"
+    val isPersian = LocalConfiguration.current.locales[0].language == "fa"
     val comingSoonText = if (isPersian) "به\u200cزودی" else "coming soon"
 
     Column(
@@ -195,38 +226,7 @@ private fun PlaceholderScreen(title: String) {
     ) {
         Text(
             text = "$translatedTitle — $comingSoonText",
-            style = androidx.compose.material3.MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProfilePlaceholderScreen(
-    uiState: MainUiState,
-    onIntent: (MainIntent) -> Unit
-) {
-    val isPersian = uiState.languageCode == LocaleManager.LANGUAGE_PERSIAN
-    val profileTitle = stringResource(id = R.string.nav_profile)
-    val comingSoonText = if (isPersian) "به\u200cزودی" else "coming soon"
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(HipkaTheme.dimens.spaceM),
-        verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM)
-    ) {
-        Text(text = "$profileTitle — $comingSoonText", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
-        Text(text = stringResource(id = R.string.settings_language), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
-            FilterChip(selected = uiState.languageCode == LocaleManager.LANGUAGE_ENGLISH, onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_ENGLISH)) }, label = { Text(text = "English") })
-            FilterChip(selected = uiState.languageCode == LocaleManager.LANGUAGE_PERSIAN, onClick = { onIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_PERSIAN)) }, label = { Text(text = "فارسی") })
-        }
-        Text(text = stringResource(id = R.string.settings_theme), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
-            FilterChip(selected = uiState.themeMode == ThemeMode.LIGHT, onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.LIGHT)) }, label = { Text(text = stringResource(id = R.string.settings_theme_light)) })
-            FilterChip(selected = uiState.themeMode == ThemeMode.DARK, onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.DARK)) }, label = { Text(text = stringResource(id = R.string.settings_theme_dark)) })
-            FilterChip(selected = uiState.themeMode == ThemeMode.SYSTEM, onClick = { onIntent(MainIntent.ChangeThemeMode(ThemeMode.SYSTEM)) }, label = { Text(text = stringResource(id = R.string.settings_theme_system)) })
-        }
     }
 }
