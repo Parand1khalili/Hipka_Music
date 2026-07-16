@@ -59,6 +59,8 @@ import com.hipka.app.domain.model.Playlist
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -99,33 +101,48 @@ fun HomeScreen(
                 // 1. Top App Bar
                 item { HomeTopBar() }
 
+                // 2. Featured Carousel Pager (اسلایدر افقی متحرک واقعی و استاندارد)
                 // 2. Featured Carousel Pager (اسلایدر افقی متحرک واقعی)
                 if (uiState.carouselSongs.isNotEmpty()) {
                     item {
                         val pagerState = rememberPagerState(pageCount = { uiState.carouselSongs.size })
                         val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
 
-                        // ایجاد چرخش خودکار اسلایدر هر ۳ ثانیه
-                        if (!isDragged) {
-                            LaunchedEffect(key1 = pagerState.currentPage) {
-                                delay(3000L)
-                                val nextPage = (pagerState.currentPage + 1) % uiState.carouselSongs.size
-                                pagerState.animateScrollToPage(nextPage)
+                        // چرخش خودکار نرم، پیوسته و بدون گیر کردن
+                        if (uiState.carouselSongs.size > 1) { // فقط اگر بیشتر از یک عکس داریم بچرخد
+                            LaunchedEffect(isDragged) { // فقط زمانی ری‌استارت شود که کاربر دستش را روی صفحه می‌کشد
+                                if (!isDragged) {
+                                    while (true) { // حلقه‌ی بی‌نهایت برای چرخش
+                                        delay(3500L)
+                                        val nextPage = (pagerState.currentPage + 1) % uiState.carouselSongs.size
+                                        // اجرای انیمیشن تا پایان (بدون قطع شدن)
+                                        pagerState.animateScrollToPage(
+                                            page = nextPage,
+                                            animationSpec = tween(
+                                                durationMillis = 800,
+                                                easing = FastOutSlowInEasing
+                                            )
+                                        )
+                                    }
+                                }
                             }
                         }
 
                         Column(modifier = Modifier.fillMaxWidth()) {
                             HorizontalPager(
                                 state = pagerState,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = HipkaTheme.dimens.spaceL),
+                                pageSpacing = HipkaTheme.dimens.spaceS
                             ) { page ->
                                 FeaturedBanner(
                                     song = uiState.carouselSongs[page],
-                                    onClick = { onSongClick(uiState.carouselSongs[page]) }
+                                    onClick = { onSongClick(uiState.carouselSongs[page]) },
+                                    modifier = Modifier.padding(vertical = HipkaTheme.dimens.spaceS)
                                 )
                             }
 
-                            // نقاط راهنمای پایین اسلایدر (Indicators)
+                            //  (Indicators)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -140,7 +157,7 @@ fun HomeScreen(
                                     }
                                     Box(
                                         modifier = Modifier
-                                            .padding(2.dp)
+                                            .padding(3.dp)
                                             .clip(CircleShape)
                                             .background(color)
                                             .size(8.dp)
@@ -246,7 +263,7 @@ private fun HomeTopBar() {
 }
 
 @Composable
-private fun FeaturedBanner(song: Song, onClick: () -> Unit) {
+private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
