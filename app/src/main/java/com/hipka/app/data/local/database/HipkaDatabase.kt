@@ -4,9 +4,9 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.hipka.app.data.local.dao.SearchHistoryDao
 import com.hipka.app.data.local.dao.SongDao
-import com.hipka.app.data.local.entity.LocalSongEntity
 import com.hipka.app.data.local.entity.OfflineMessageEntity
 import com.hipka.app.data.local.entity.SearchHistoryEntity
+import com.hipka.app.data.local.entity.LocalSongEntity
 @Database(
     entities = [LocalSongEntity::class, SearchHistoryEntity::class, OfflineMessageEntity::class],
     version = 1,

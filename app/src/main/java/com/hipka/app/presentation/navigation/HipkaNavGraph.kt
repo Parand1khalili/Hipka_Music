@@ -27,8 +27,10 @@ import androidx.navigation.compose.rememberNavController
 import com.hipka.app.R
 import com.hipka.app.core.locale.LocaleManager
 import com.hipka.app.data.local.datastore.ThemeMode
+import com.hipka.app.presentation.features.home.HomeIntent
 import com.hipka.app.presentation.features.home.HomeScreen
 import com.hipka.app.presentation.features.home.HomeViewModel
+import com.hipka.app.presentation.features.home.SeeAllScreen
 import com.hipka.app.presentation.features.player.MiniPlayerBar
 import com.hipka.app.presentation.features.player.PlayerIntent
 import com.hipka.app.presentation.features.player.PlayerViewModel
@@ -84,9 +86,43 @@ fun HipkaNavGraph(
             composable(Screen.Home.route) {
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                val context = androidx.compose.ui.platform.LocalContext.current
+
                 HomeScreen(
                     uiState = homeUiState,
-                    onSongClick = { song -> playerViewModel.onIntent(PlayerIntent.PlaySong(song)) }
+                    onSongClick = { song -> playerViewModel.onIntent(PlayerIntent.PlaySong(song)) },
+                    onRefresh = { homeViewModel.onIntent(HomeIntent.RefreshHome) },
+                    onQuickActionClick = { action ->
+                        when (action) {
+                            "liked" -> {
+                                // نمونه: هدایت به صفحه لایک شده‌ها (یا نمایش توست اگر برنچش هنوز ادغام نشده)
+                                android.widget.Toast.makeText(context, "Navigating to Liked Songs...", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            "recent" -> {
+                                android.widget.Toast.makeText(context, "Opening Recently Played...", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            "playlists" -> {
+                                navController.navigate(Screen.Playlists.route)
+                            }
+                            "artists" -> {
+                                android.widget.Toast.makeText(context, "Opening Top Artists...", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    onSeeAllClick = { section ->
+                        navController.navigate("see_all/$section")
+                    }
+                )
+            }
+            // اضافه کردن صفحه‌ی See all به گراف نویگیشن
+            composable(
+                route = "see_all/{section}",
+                arguments = listOf(androidx.navigation.navArgument("section") { type = androidx.navigation.NavType.StringType })
+            ) { backStackEntry ->
+                val section = backStackEntry.arguments?.getString("section") ?: ""
+                SeeAllScreen(
+                    sectionName = section,
+                    onBackClick = { navController.popBackStack() }
                 )
             }
             composable(Screen.Search.route) {
