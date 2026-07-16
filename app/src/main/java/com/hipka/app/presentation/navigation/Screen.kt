@@ -25,4 +25,8 @@ sealed class Screen(val route: String) {
     companion object {
         val bottomNavItems: List<Screen> = listOf(Home, Search, Downloads, Playlists, Profile)
     }
+
+    object SeeAll : Screen("see_all/{section}") {
+        fun createRoute(section: String) = "see_all/$section"
+    }
 }

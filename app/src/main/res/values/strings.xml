@@ -39,5 +39,17 @@
     <string name="search_type_to_search">Type to search for your favorite music</string>
     <string name="search_no_results_for">No results found for \"%1$s\"</string>
 
+    <!-- Home Screen UI -->
+    <string name="home_quick_liked">Liked</string>
+    <string name="home_quick_recent">Recent</string>
+    <string name="home_quick_playlists">Playlists</string>
+    <string name="home_quick_artists">Top Artists</string>
+    <string name="home_section_popular">Popular</string>
+    <string name="home_section_new_releases">New Releases</string>
+    <string name="home_section_global_playlists">Global Playlists</string>
+    <string name="home_section_local_playlists">Local Playlists</string>
+    <string name="home_see_all">See all ></string>
+    <string name="home_featured_today">FEATURED TODAY</string>
+
 
 </resources>

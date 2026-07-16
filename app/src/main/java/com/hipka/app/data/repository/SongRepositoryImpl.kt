@@ -14,15 +14,14 @@ class SongRepositoryImpl @Inject constructor(
 ) : SongRepository {
 
     /* ====================================================================
-       UNCOMMENT THIS BLOCK FOR OFFLINE TESTING // tnx to IRAN!!!!
-       A robust list of offline mock songs if net problems happen.
+       UNCOMMENT THIS BLOCK FOR OFFLINE TESTING (MOCK DATA WITH POPULARITY & DATES)
        ====================================================================
     private val mockSongs = listOf(
-        Song(id = "mock-1", title = "Midnight City", artistName = "M83", coverImageUrl = "https://picsum.photos/200/200?random=1", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-2", title = "Starboy", artistName = "The Weeknd", coverImageUrl = "https://picsum.photos/200/200?random=2", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-3", title = "Blinding Lights", artistName = "The Weeknd", coverImageUrl = "https://picsum.photos/200/200?random=3", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-4", title = "Sweater Weather", artistName = "The Neighbourhood", coverImageUrl = "https://picsum.photos/200/200?random=4", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-5", title = "Do I Wanna Know?", artistName = "Arctic Monkeys", coverImageUrl = "https://picsum.photos/200/200?random=5", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", isLiked = false, isDownloaded = false, localFilePath = null)
+        Song(id = "mock-1", title = "Midnight City", artistName = "M83", coverImageUrl = "https://picsum.photos/200/200?random=1", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", playCount = 15200, releaseDate = "2026-01-10", isLiked = false, isDownloaded = false, localFilePath = null),
+        Song(id = "mock-2", title = "Starboy", artistName = "The Weeknd", coverImageUrl = "https://picsum.photos/200/200?random=2", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", playCount = 98500, releaseDate = "2025-11-25", isLiked = false, isDownloaded = false, localFilePath = null),
+        Song(id = "mock-3", title = "Blinding Lights", artistName = "The Weeknd", coverImageUrl = "https://picsum.photos/200/200?random=3", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", playCount = 125000, releaseDate = "2026-05-14", isLiked = false, isDownloaded = false, localFilePath = null),
+        Song(id = "mock-4", title = "Sweater Weather", artistName = "The Neighbourhood", coverImageUrl = "https://picsum.photos/200/200?random=4", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", playCount = 45000, releaseDate = "2024-08-19", isLiked = false, isDownloaded = false, localFilePath = null),
+        Song(id = "mock-5", title = "Do I Wanna Know?", artistName = "Arctic Monkeys", coverImageUrl = "https://picsum.photos/200/200?random=5", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", playCount = 74100, releaseDate = "2026-07-01", isLiked = false, isDownloaded = false, localFilePath = null)
     )
     ==================================================================== */
 
@@ -35,16 +34,15 @@ class SongRepositoryImpl @Inject constructor(
                     title = dto.title,
                     artistName = dto.artistName,
                     coverImageUrl = dto.coverImageUrl,
-                    audioUrl = dto.audioUrl
+                    audioUrl = dto.audioUrl,
+                    playCount = dto.playCount ?: 0,
+                    releaseDate = dto.releaseDate ?: ""
                 )
             }
             emit(songs)
         } catch (e: Exception) {
             android.util.Log.e("REPO_ERROR", "Network failed. Emitting empty list. Cause: ${e.message}")
-
-            // Real implementation: show empty state on network error
             emit(emptyList())
-
             // UNCOMMENT FOR OFFLINE TESTING:
             // emit(mockSongs)
         }
@@ -59,15 +57,14 @@ class SongRepositoryImpl @Inject constructor(
                 artistName = localSong.artistName,
                 coverImageUrl = localSong.coverImageUrl,
                 audioUrl = localSong.audioUrl,
+                playCount = localSong.playCount,
+                releaseDate = localSong.releaseDate,
                 isLiked = localSong.isLiked,
                 isDownloaded = localSong.isDownloaded,
                 localFilePath = localSong.localFilePath
             )
         }
-
-        // Real implementation: return null if not found
         return null
-
         // UNCOMMENT FOR OFFLINE TESTING:
         // return mockSongs.find { it.id == id }
     }
@@ -76,7 +73,6 @@ class SongRepositoryImpl @Inject constructor(
         if (query.isBlank()) return emptyList()
         return try {
             val orQuery = "(title.ilike.*$query*,artist_name.ilike.*$query*)"
-
             val remoteSongs = songApi.searchSongs(orQuery)
             remoteSongs.map { dto ->
                 Song(
@@ -84,15 +80,14 @@ class SongRepositoryImpl @Inject constructor(
                     title = dto.title,
                     artistName = dto.artistName,
                     coverImageUrl = dto.coverImageUrl,
-                    audioUrl = dto.audioUrl
+                    audioUrl = dto.audioUrl,
+                    playCount = dto.playCount ?: 0,
+                    releaseDate = dto.releaseDate ?: ""
                 )
             }
         } catch (e: Exception) {
             android.util.Log.e("REPO_ERROR", "Search query failed. Returning empty list.")
-
-            // Real implementation: return empty list on network error
-            return emptyList()
-
+            emptyList()
             // UNCOMMENT FOR OFFLINE TESTING:
             /*
             return mockSongs.filter {

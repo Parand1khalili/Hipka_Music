@@ -3,14 +3,14 @@ package com.hipka.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-// history search
+// 1. History search
 @Entity(tableName = "search_history")
 data class SearchHistoryEntity(
     @PrimaryKey val query: String,
     val timestamp: Long
 )
 
-// song state ( downloaded - liked - offline musics)
+// 2. Song state (Downloaded, Liked, Offline music)
 @Entity(tableName = "songs")
 data class LocalSongEntity(
     @PrimaryKey val id: String,
@@ -18,12 +18,14 @@ data class LocalSongEntity(
     val artistName: String,
     val coverImageUrl: String,
     val audioUrl: String,
+    val playCount: Int,
+    val releaseDate: String,
     val isLiked: Boolean,
     val isDownloaded: Boolean,
-    val localFilePath: String? // downloaded file address on phone
+    val localFilePath: String? // Downloaded file address on the phone
 )
 
-// chat history
+// 3. Chat history
 @Entity(tableName = "offline_messages")
 data class OfflineMessageEntity(
     @PrimaryKey val id: String,

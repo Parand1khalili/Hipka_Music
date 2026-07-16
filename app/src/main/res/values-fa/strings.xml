@@ -34,4 +34,16 @@
     <string name="search_recent_searches">جستجوهای اخیر</string>
     <string name="search_type_to_search">برای جستجوی موسیقی دلخواه خود تایپ کنید</string>
     <string name="search_no_results_for">نتیجه‌ای برای \"%1$s\" یافت نشد</string>
+
+    <!-- Home Screen UI -->
+    <string name="home_quick_liked">لایک شده</string>
+    <string name="home_quick_recent">اخیراً شنیده شده</string>
+    <string name="home_quick_playlists">پلی‌لیست‌ها</string>
+    <string name="home_quick_artists">هنرمندان برتر</string>
+    <string name="home_section_popular">محبوب‌ترین‌ها</string>
+    <string name="home_section_new_releases">جدیدترین‌ها</string>
+    <string name="home_section_global_playlists">پلی‌لیست‌های جهانی</string>
+    <string name="home_section_local_playlists">پلی‌لیست‌های محلی</string>
+    <string name="home_see_all"><![CDATA[مشاهده همه >]]></string>
+    <string name="home_featured_today">پیشنهاد ویژه امروز</string>
 </resources>

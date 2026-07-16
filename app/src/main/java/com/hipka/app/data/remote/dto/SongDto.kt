@@ -9,5 +9,7 @@ data class SongDto(
     @SerialName("title") val title: String,
     @SerialName("artist_name") val artistName: String,
     @SerialName("cover_image_url") val coverImageUrl: String,
-    @SerialName("audio_url") val audioUrl: String
+    @SerialName("audio_url") val audioUrl: String,
+    @SerialName("play_count") val playCount: Int? = 0,
+    @SerialName("release_date") val releaseDate: String? = ""
 )
