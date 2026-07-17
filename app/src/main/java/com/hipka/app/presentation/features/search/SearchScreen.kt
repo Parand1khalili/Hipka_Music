@@ -22,7 +22,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.People // ✨ ویژگی کیانا: ایمپورت آیکون مردم برای دکمه پیدا کردن دوستان
+import androidx.compose.material.icons.filled.People // ویژگی کیانا: ایمپورت آیکون مردم برای دکمه پیدا کردن دوستان
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,7 +48,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.hipka.app.R
-import com.hipka.app.data.local.entity.SearchHistoryEntity
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
 
@@ -58,7 +57,7 @@ fun SearchScreen(
     likedSongIds: Set<String>,
     onSongClick: (Song) -> Unit,
     onLikeClick: (Song) -> Unit,
-    onNavigateToDiscoverUsers: () -> Unit, // ✨ ویژگی کیانا: پارامتر جدید ناوبری برای اتصال به هاب اکتشاف کاربران
+    onNavigateToDiscoverUsers: () -> Unit, // ویژگی کیانا: پارامتر جدید ناوبری برای اتصال به هاب اکتشاف کاربران
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,7 +117,7 @@ fun SearchScreen(
             )
         }
 
-        // ✨ شاهکار سناریوی جدید UX (ویژگی کیانا): دکمه شیک پیدا کردن دوستان فقط زمانی که باکس سرچ خالی است نمایش داده/لود می‌شود
+        // ویژگی کیانا: دکمه شیک پیدا کردن دوستان فقط زمانی که باکس سرچ خالی است نمایش داده می‌شود
         if (uiState.searchQuery.isEmpty()) {
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
             OutlinedButton(
@@ -138,7 +137,6 @@ fun SearchScreen(
 
         Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
 
-        // مدیریت وضعیت‌های مختلف صفحه سرچ (بر اساس معماری بدون ارور شما)
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -153,14 +151,15 @@ fun SearchScreen(
                     modifier = Modifier.padding(vertical = HipkaTheme.dimens.spaceS)
                 )
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(uiState.searchHistory, key = { it.query }) { historyItem ->
+                    // اصلاح کلید و مپ کردن صحیح استرینگ تاریخچه
+                    items(uiState.searchHistory, key = { it }) { historyQuery ->
                         SearchHistoryItem(
-                            item = historyItem,
+                            query = historyQuery,
                             onClick = {
-                                viewModel.onIntent(SearchIntent.SearchSong(historyItem.query))
+                                viewModel.onIntent(SearchIntent.SearchSong(historyQuery))
                                 keyboardController?.hide()
                             },
-                            onDelete = { viewModel.onIntent(SearchIntent.DeleteHistoryItem(historyItem.query)) }
+                            onDelete = { viewModel.onIntent(SearchIntent.DeleteHistoryItem(historyQuery)) }
                         )
                     }
                 }
@@ -191,7 +190,6 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
                 ) {
-                    // ترکیب وضعیت لایک از دیتابیس با نتایج سرچ
                     val resultsWithLikeStatus = uiState.searchResults.map { song ->
                         song.copy(isLiked = likedSongIds.contains(song.id))
                     }
@@ -211,7 +209,7 @@ fun SearchScreen(
 
 @Composable
 private fun SearchHistoryItem(
-    item: SearchHistoryEntity, // حفظ تغییر شما به Entity (نکته کیانا: نسخه تو دریافت مستقیم استرینگ برای حل قطعی ارورهای دیتا تایپ بود)
+    query: String, // اصلاح نام و دیتا تایپ به String ساده بدون ارور .query
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -228,7 +226,7 @@ private fun SearchHistoryItem(
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = item.query,
+            text = query, // استفاده مستقیم از رشته
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier
                 .weight(1f)

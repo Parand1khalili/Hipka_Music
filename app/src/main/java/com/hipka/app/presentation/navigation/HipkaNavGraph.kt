@@ -46,6 +46,7 @@ import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
 import androidx.compose.material3.MaterialTheme
+import com.hipka.app.presentation.features.see_all.SeeAllScreen
 
 @Composable
 fun HipkaNavGraph(
@@ -129,14 +130,25 @@ fun HipkaNavGraph(
                 )
             }
 
+            //  بخش جدید و کامل شده برای اتصال بدون ارور به سیستم لایک و پخش موزیک پلیر Hipka
             composable(
                 route = "see_all/{section}",
                 arguments = listOf(navArgument("section") { type = NavType.StringType })
             ) { backStackEntry ->
                 val section = backStackEntry.arguments?.getString("section") ?: ""
+
                 SeeAllScreen(
                     sectionName = section,
-                    onBackClick = { navController.popBackStack() }
+                    likedSongIds = likedSongIds, //  اتصال مستقیم به ست لایک‌های زنده پروژه
+                    onBackClick = { navController.popBackStack() },
+                    onSongClick = { song ->
+                        // ⚡ اضافه کردن به لیست شنیده‌شده‌های اخیر و پخش مستقیم در مینی‌پلیر
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onLikeClick = { song ->
+                        songInteractionViewModel.toggleLike(song)
+                    }
                 )
             }
 
@@ -206,6 +218,10 @@ fun HipkaNavGraph(
                         songInteractionViewModel.addToRecentlyPlayed(song)
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
                     },
+                    onShuffleAllClick = { songList ->
+                        // اجرای شافل تصادفی روی کل لیست لایک شده‌ها
+                        playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
+                    },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
@@ -216,10 +232,13 @@ fun HipkaNavGraph(
                         songInteractionViewModel.addToRecentlyPlayed(song)
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
                     },
+                    onShuffleAllClick = { songList ->
+                        // اجرای شافل تصادفی روی کل لیست آهنگ‌های اخیر شنیده شده
+                        playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
+                    },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
-
             composable(Screen.ChatList.route) { PlaceholderScreen("Chats") }
 
             composable(

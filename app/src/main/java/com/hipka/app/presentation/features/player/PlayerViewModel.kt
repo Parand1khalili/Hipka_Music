@@ -35,6 +35,14 @@ class PlayerViewModel @Inject constructor(
         when (intent) {
             is PlayerIntent.PlaySong -> playSong(intent.song)
             PlayerIntent.TogglePlayPause -> togglePlayPause()
+            is PlayerIntent.ShufflePlayList -> {
+                if (intent.songs.isNotEmpty()) {
+                    val shuffledList = intent.songs.shuffled()
+                    // پخش اولین آهنگ از لیست مخلوط شده
+                    playSong(shuffledList.first())
+                    // TODO: در صورت نیاز در اسپرینت‌های بعدی کل لیست shuffledList به صف پخش (Queue) ریپازیتوری پاس داده شود.
+                }
+            }
         }
     }
 

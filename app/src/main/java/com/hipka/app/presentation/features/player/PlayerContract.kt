@@ -10,4 +10,5 @@ data class PlayerUiState(
 sealed interface PlayerIntent {
     data class PlaySong(val song: Song) : PlayerIntent
     data object TogglePlayPause : PlayerIntent
+    data class ShufflePlayList(val songs: List<Song>) : PlayerIntent
 }
