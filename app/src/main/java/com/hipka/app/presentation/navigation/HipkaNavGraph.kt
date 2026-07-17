@@ -98,7 +98,12 @@ fun HipkaNavGraph(
                     likedSongIds = likedSongIds,
                     onSongClick = { song ->
                         songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                        // صف پخش را از هر لیستی که آهنگ در آن است می‌سازیم تا Next/Crossfade معنا داشته باشد
+                        val queue = listOf(homeUiState.popularSongs, homeUiState.newReleases, homeUiState.carouselSongs)
+                            .firstOrNull { list -> list.any { it.id == song.id } }
+                            ?: listOf(song)
+                        val startIndex = queue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                        playerViewModel.onIntent(PlayerIntent.PlayQueue(queue, startIndex))
                     },
                     onLikeClick = { song ->
                         songInteractionViewModel.toggleLike(song)

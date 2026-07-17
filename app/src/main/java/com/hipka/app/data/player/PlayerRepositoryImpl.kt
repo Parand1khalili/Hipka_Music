@@ -31,8 +31,14 @@ class PlayerRepositoryImpl @Inject constructor(
 
     private var mediaController: MediaController? = null
 
+    // آهنگ‌های صف فعلی، برای بازیابی Song کامل هنگام تغییر آیتم در پلیر (چون MediaItem فقط metadata محدود دارد)
+    private var queuedSongsById: Map<String, Song> = emptyMap()
+
     private val _isPlaying = MutableStateFlow(false)
     override val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
+    private val _currentSong = MutableStateFlow<Song?>(null)
+    override val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
     private val _playbackErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
     override val playbackErrors: SharedFlow<String> = _playbackErrors
@@ -40,6 +46,10 @@ class PlayerRepositoryImpl @Inject constructor(
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            _currentSong.value = mediaItem?.mediaId?.let { queuedSongsById[it] }
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -67,11 +77,21 @@ class PlayerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun playSong(song: Song) {
+        playQueue(listOf(song), 0)
+    }
+
+    override suspend fun playQueue(songs: List<Song>, startIndex: Int) {
+        if (songs.isEmpty()) return
+
+        queuedSongsById = songs.associateBy { it.id }
+        val safeStartIndex = startIndex.coerceIn(songs.indices)
+
         controller().apply {
-            setMediaItem(song.toMediaItem())
+            setMediaItems(songs.map { it.toMediaItem() }, safeStartIndex, 0L)
             prepare()
             play()
         }
+        _currentSong.value = songs[safeStartIndex]
     }
 
     override suspend fun pause() {
@@ -80,6 +100,14 @@ class PlayerRepositoryImpl @Inject constructor(
 
     override suspend fun resume() {
         controller().play()
+    }
+
+    override suspend fun skipToNext() {
+        controller().seekToNextMediaItem()
+    }
+
+    override suspend fun skipToPrevious() {
+        controller().seekToPreviousMediaItem()
     }
 }
 
