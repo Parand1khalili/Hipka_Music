@@ -154,6 +154,15 @@ private fun NowPlayingContent(
 
         Box(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
 
+        AudioVisualizer(
+            isPlaying = uiState.isPlaying,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(HipkaTheme.dimens.visualizerHeight)
+        )
+
+        Box(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
+
         var isDragging by remember { mutableStateOf(false) }
         var dragPositionMs by remember { mutableLongStateOf(0L) }
         val durationMs = uiState.progress.durationMs.coerceAtLeast(1L)
