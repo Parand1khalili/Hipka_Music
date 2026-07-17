@@ -1,5 +1,10 @@
 package com.hipka.app.presentation.features.player
 
+import android.content.Context
+import android.graphics.drawable.BitmapDrawable
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,13 +37,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.hipka.app.R
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.roundToLong
 
@@ -48,7 +62,29 @@ fun PlayerScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
+    val context = LocalContext.current
+    val song = uiState.currentSong
+
+    var dominantColor by remember { mutableStateOf<Color?>(null) }
+    LaunchedEffect(song?.coverImageUrl) {
+        dominantColor = song?.coverImageUrl?.let { extractDominantColor(context, it) }
+    }
+
+    val backgroundColor by animateColorAsState(
+        targetValue = dominantColor ?: MaterialTheme.colorScheme.surfaceVariant,
+        animationSpec = tween(durationMillis = 600),
+        label = "nowPlayingBackground"
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(backgroundColor.copy(alpha = 0.55f), MaterialTheme.colorScheme.background)
+                )
+            )
+    ) {
         IconButton(onClick = onBackClick) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -56,7 +92,6 @@ fun PlayerScreen(
             )
         }
 
-        val song = uiState.currentSong
         if (song == null) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -188,4 +223,23 @@ private fun formatDuration(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
+}
+
+// رنگ غالب کاور آهنگ را استخراج می‌کند تا به صورت گرادیانت نرم روی پس‌زمینه صفحه پلیر اعمال شود
+private suspend fun extractDominantColor(context: Context, imageUrl: String): Color? = withContext(Dispatchers.IO) {
+    try {
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .allowHardware(false) // Palette باید بایت‌های واقعی بیت‌مپ را بخواند، نه بافر GPU
+            .build()
+
+        val bitmap = (context.imageLoader.execute(request).drawable as? BitmapDrawable)?.bitmap
+            ?: return@withContext null
+
+        val palette = Palette.from(bitmap).generate()
+        val swatch = palette.vibrantSwatch ?: palette.dominantSwatch ?: palette.mutedSwatch
+        swatch?.rgb?.let { Color(it) }
+    } catch (e: Exception) {
+        null
+    }
 }

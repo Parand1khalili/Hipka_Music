@@ -101,6 +101,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.palette.ktx)
 
     // ۶. ابزارهای تست و دیباگ برنامه
     coreLibraryDesugaring(libs.desugar.jdk.libs)
