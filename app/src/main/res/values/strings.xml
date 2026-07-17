@@ -29,6 +29,10 @@
     <!-- Player -->
     <string name="player_play_cd">Play</string>
     <string name="player_pause_cd">Pause</string>
+    <string name="player_skip_next_cd">Next</string>
+    <string name="player_skip_previous_cd">Previous</string>
+    <string name="player_back_cd">Back</string>
+    <string name="player_nothing_playing">Nothing is playing</string>
 
     <!-- Search screen -->
     <string name="search_hint">Search songs or artists...</string>

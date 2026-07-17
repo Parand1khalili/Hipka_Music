@@ -33,6 +33,7 @@ import com.hipka.app.presentation.features.home.HomeViewModel
 import com.hipka.app.presentation.features.home.SeeAllScreen
 import com.hipka.app.presentation.features.player.MiniPlayerBar
 import com.hipka.app.presentation.features.player.PlayerIntent
+import com.hipka.app.presentation.features.player.PlayerScreen
 import com.hipka.app.presentation.features.player.PlayerViewModel
 import com.hipka.app.presentation.features.search.SearchScreen
 import com.hipka.app.presentation.features.playlists.PlaylistsScreen
@@ -75,6 +76,7 @@ fun HipkaNavGraph(
                         song = song,
                         isPlaying = playerUiState.isPlaying,
                         onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
+                        onClick = { navController.navigate(Screen.NowPlaying.route) },
                         modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
                     )
                 }
@@ -177,7 +179,13 @@ fun HipkaNavGraph(
             }
 
             // --- Secondary destinations ----------------------------------
-            composable(Screen.NowPlaying.route) { PlaceholderScreen("Now Playing") }
+            composable(Screen.NowPlaying.route) {
+                PlayerScreen(
+                    uiState = playerUiState,
+                    onIntent = { playerViewModel.onIntent(it) },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }
 
             composable(Screen.FollowedUsers.route) {

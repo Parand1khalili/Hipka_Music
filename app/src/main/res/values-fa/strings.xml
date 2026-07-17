@@ -25,6 +25,10 @@
 
     <string name="player_play_cd">پخش</string>
     <string name="player_pause_cd">توقف</string>
+    <string name="player_skip_next_cd">بعدی</string>
+    <string name="player_skip_previous_cd">قبلی</string>
+    <string name="player_back_cd">بازگشت</string>
+    <string name="player_nothing_playing">چیزی در حال پخش نیست</string>
 
     <!-- Search screen -->
     <string name="search_hint">جستجوی آهنگ یا خواننده...</string>
