@@ -1,6 +1,5 @@
 package com.hipka.app.presentation.features.profile
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,11 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.hipka.app.R
 import com.hipka.app.core.locale.LocaleManager
 import com.hipka.app.data.local.datastore.ThemeMode
 import com.hipka.app.domain.model.User
@@ -83,7 +84,7 @@ fun ProfileScreen(
 private fun DemoUserPicker(users: List<User>, onPick: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(HipkaTheme.dimens.spaceM)) {
         Text(
-            text = "No auth system yet — pick a demo user to act as:",
+            text = stringResource(id = R.string.demo_user_picker_title),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
@@ -120,7 +121,7 @@ private fun ProfileContent(
         Text(text = user.name, style = MaterialTheme.typography.titleLarge)
         if (user.isPremium) {
             Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
-            AssistChip(onClick = {}, label = { Text("Premium") })
+            AssistChip(onClick = {}, label = { Text(stringResource(id = R.string.premium)) })
         }
 
         Spacer(Modifier.height(HipkaTheme.dimens.spaceL))
@@ -128,12 +129,13 @@ private fun ProfileContent(
         Button(onClick = onNavigateToFollowedUsers, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Filled.People, contentDescription = null)
             Spacer(Modifier.width(HipkaTheme.dimens.spaceS))
-            Text("Followed users")
+            // ✨ اصلاح باگ UX: متصل شدن متن دکمه به استرینگ داینامیک جدید (Discover People / کشف کاربران)
+            Text(stringResource(id = R.string.nav_discover_users))
         }
 
         Spacer(Modifier.height(HipkaTheme.dimens.spaceL))
 
-        Text(text = "Language", style = MaterialTheme.typography.titleMedium)
+        Text(text = stringResource(id = R.string.language), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
         Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
             FilterChip(
@@ -150,30 +152,30 @@ private fun ProfileContent(
 
         Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
 
-        Text(text = "Theme", style = MaterialTheme.typography.titleMedium)
+        Text(text = stringResource(id = R.string.theme), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
         Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
             FilterChip(
                 selected = mainUiState.themeMode == ThemeMode.LIGHT,
                 onClick = { onMainIntent(MainIntent.ChangeThemeMode(ThemeMode.LIGHT)) },
-                label = { Text("Light") }
+                label = { Text(stringResource(id = R.string.theme_light)) }
             )
             FilterChip(
                 selected = mainUiState.themeMode == ThemeMode.DARK,
                 onClick = { onMainIntent(MainIntent.ChangeThemeMode(ThemeMode.DARK)) },
-                label = { Text("Dark") }
+                label = { Text(stringResource(id = R.string.theme_dark)) }
             )
             FilterChip(
                 selected = mainUiState.themeMode == ThemeMode.SYSTEM,
                 onClick = { onMainIntent(MainIntent.ChangeThemeMode(ThemeMode.SYSTEM)) },
-                label = { Text("System") }
+                label = { Text(stringResource(id = R.string.theme_system)) }
             )
         }
 
         Spacer(Modifier.height(HipkaTheme.dimens.spaceXL))
 
         OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
-            Text("Switch demo user")
+            Text(stringResource(id = R.string.switch_demo_user))
         }
     }
 }

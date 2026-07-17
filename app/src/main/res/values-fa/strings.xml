@@ -53,4 +53,20 @@
     <string name="recently_played_title">اخیراً پخش شده</string>
     <string name="no_recent_songs">تاریخچه پخش خالی است</string>
     <string name="no_recent_songs_desc">آهنگ‌هایی که گوش می‌دهید اینجا ظاهر می‌شوند.</string>
+    <string name="followed_users">کاربران دنبال شده</string>
+    <string name="language">زبان برنامه</string>
+    <string name="theme">پوسته ظاهر</string>
+    <string name="switch_demo_user">تغییر کاربر دمو</string>
+    <string name="no_playlists_yet">هنوز پلی‌لیستی وجود ندارد</string>
+    <string name="no_playlists_desc">پلی‌لیست‌های جهانی، محلی و شخصی شما در اینجا نمایش داده می‌شوند.</string>
+    <string name="demo_user_picker_title">سیستم ورود هنوز پیاده نشده — یک کاربر دمو انتخاب کنید:</string>
+    <string name="premium">ویژه</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تاریک</string>
+    <string name="theme_system">سیستم</string>
+    <string name="btn_follow">دنبال کردن</string>
+    <string name="btn_unfollow">دنبال شده</string>
+    <string name="chat_input_hint">پیام خود را بنویسید…</string>
+    <string name="tap_to_chat_hint">برای گفتگو ضربه بزنید</string>
+    <string name="nav_discover_users">کشف کاربران</string>
 </resources>

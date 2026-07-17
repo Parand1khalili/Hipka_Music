@@ -1,22 +1,12 @@
 package com.hipka.app.presentation.features.home
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -25,20 +15,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.FavoriteBorder // ایمپورت جدید برای قلب توخالی
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -59,22 +37,18 @@ import com.hipka.app.domain.model.Playlist
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
 import kotlinx.coroutines.delay
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    likedSongIds: Set<String>, // اضافه شد
+    likedSongIds: Set<String>,
     onSongClick: (Song) -> Unit,
     onRefresh: () -> Unit,
     onQuickActionClick: (String) -> Unit,
     onSeeAllClick: (String) -> Unit,
-    onLikeClick: (Song) -> Unit, // تغییر به Song
+    onLikeClick: (Song) -> Unit,
+    onPlaylistClick: (String) -> Unit, // ✨ اضافه شدن این کالبک برای زنده کردن دکمه‌های کلیک روی ردیف پلی‌لیست‌ها
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { onRefresh() }
@@ -103,10 +77,8 @@ fun HomeScreen(
                 modifier = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = HipkaTheme.dimens.spaceXL)
             ) {
-                // 1. Top App Bar
                 item { HomeTopBar() }
 
-                // 2. Featured Carousel Pager
                 if (uiState.carouselSongs.isNotEmpty()) {
                     item {
                         val pagerState = rememberPagerState(pageCount = { uiState.carouselSongs.size })
@@ -169,12 +141,10 @@ fun HomeScreen(
                     }
                 }
 
-                // 3. Quick Actions
                 item {
                     QuickActionsRow(onActionClick = onQuickActionClick)
                 }
 
-                // 4. Popular Songs
                 if (uiState.popularSongs.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -183,7 +153,6 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        // آپدیت: onLikeClick به لیست افقی پاس داده می‌شود
                         SongHorizontalList(
                             songs = uiState.popularSongs.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
                             onSongClick = onSongClick,
@@ -192,7 +161,6 @@ fun HomeScreen(
                     }
                 }
 
-                // 5. New Releases
                 if (uiState.newReleases.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -201,7 +169,6 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        // آپدیت: onLikeClick به لیست افقی پاس داده می‌شود
                         SongHorizontalList(
                             songs = uiState.newReleases.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
                             onSongClick = onSongClick,
@@ -210,7 +177,7 @@ fun HomeScreen(
                     }
                 }
 
-                // 6. Global Playlists
+                // ✨ اعمال کالبک جدید روی کلیک لیست افقی موسیقی جهان
                 if (uiState.globalPlaylists.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -219,11 +186,14 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        PlaylistHorizontalList(playlists = uiState.globalPlaylists, onClick = { /* باز کردن جزییات */ })
+                        PlaylistHorizontalList(
+                            playlists = uiState.globalPlaylists,
+                            onClick = { playlist -> onPlaylistClick(playlist.id) }
+                        )
                     }
                 }
 
-                // 7. Local Playlists
+                // ✨ اعمال کالبک جدید روی کلیک لیست افقی موسیقی محلی
                 if (uiState.localPlaylists.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -232,7 +202,10 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        PlaylistHorizontalList(playlists = uiState.localPlaylists, onClick = { /* باز کردن جزییات */ })
+                        PlaylistHorizontalList(
+                            playlists = uiState.localPlaylists,
+                            onClick = { playlist -> onPlaylistClick(playlist.id) }
+                        )
                     }
                 }
             }
@@ -276,7 +249,7 @@ private fun HomeTopBar() {
 @Composable
 private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = HipkaTheme.dimens.spaceM, vertical = HipkaTheme.dimens.spaceS)
             .clip(RoundedCornerShape(HipkaTheme.dimens.cornerL))
@@ -431,7 +404,6 @@ private fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
 private fun SongHorizontalList(
     songs: List<Song>,
     onSongClick: (Song) -> Unit,
-    // آپدیت مهم: اینجا String به Song تغییر کرد تا ارور رفع شود
     onLikeClick: (Song) -> Unit
 ) {
     LazyRow(
@@ -442,7 +414,7 @@ private fun SongHorizontalList(
             SquareSongCard(
                 song = song,
                 onClick = { onSongClick(song) },
-                onLikeClick = { onLikeClick(song) } // ارسال کل آهنگ
+                onLikeClick = { onLikeClick(song) }
             )
         }
     }
@@ -454,7 +426,6 @@ private fun SquareSongCard(
     onClick: () -> Unit,
     onLikeClick: () -> Unit
 ) {
-    // هک isLikedLocal به طور کامل پاک شد. حالا دیتابیس به صورت زنده این را کنترل می‌کند.
     Column(
         modifier = Modifier
             .width(140.dp)
@@ -490,7 +461,6 @@ private fun SquareSongCard(
                 )
             }
 
-            // خواندن مستقیم وضعیت لایک از دیتابیس (بدون تاخیر)
             IconButton(onClick = onLikeClick, modifier = Modifier.size(24.dp)) {
                 Icon(
                     imageVector = if (song.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
@@ -501,6 +471,7 @@ private fun SquareSongCard(
         }
     }
 }
+
 @Composable
 private fun PlaylistHorizontalList(playlists: List<Playlist>, onClick: (Playlist) -> Unit) {
     LazyRow(

@@ -108,12 +108,23 @@ fun HipkaNavGraph(
                         when (action) {
                             "liked" -> navController.navigate(Screen.LikedSongs.route)
                             "recent" -> navController.navigate(Screen.RecentlyPlayed.route)
-                            "playlists" -> navController.navigate(Screen.Playlists.route)
+                            "playlists" -> navController.navigate(Screen.Playlists.route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                             "artists" -> android.widget.Toast.makeText(context, "Opening Top Artists...", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onSeeAllClick = { section ->
                         navController.navigate("see_all/$section")
+                    },
+                    onPlaylistClick = { playlistId ->
+                        navController.navigate(Screen.Playlists.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }
@@ -143,6 +154,7 @@ fun HipkaNavGraph(
             }
 
             composable(Screen.Downloads.route) { PlaceholderScreen("Downloads") }
+
             composable(Screen.Playlists.route) {
                 PlaylistsScreen(
                     onPlaylistClick = { playlistId ->
@@ -167,7 +179,8 @@ fun HipkaNavGraph(
                 FollowedUsersScreen(
                     onOpenChat = { peerId ->
                         navController.navigate(Screen.ChatConversation.createRoute(peerId))
-                    }
+                    },
+                    onBackClick = { navController.popBackStack() } // ✨ حل ارور اول: پاس دادن دکمه بازگشت برای لیست یوزرها
                 )
             }
 
@@ -197,7 +210,9 @@ fun HipkaNavGraph(
                 route = Screen.ChatConversation.route,
                 arguments = listOf(navArgument(Screen.ChatConversation.ARG_PEER_USER_ID) { type = NavType.StringType })
             ) {
-                ChatScreen()
+                ChatScreen(
+                    onBackClick = { navController.popBackStack() } // ✨ حل ارور دوم: پاس دادن دکمه بازگشت برای داخل صفحه چت
+                )
             }
         }
     }

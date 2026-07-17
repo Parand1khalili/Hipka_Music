@@ -57,6 +57,20 @@
     <string name="recently_played_title">Recently Played</string>
     <string name="no_recent_songs">No Listening History</string>
     <string name="no_recent_songs_desc">Songs you listen to will appear here.</string>
-
-
+    <string name="followed_users">Followed users</string>
+    <string name="language">Language</string>
+    <string name="theme">Theme</string>
+    <string name="switch_demo_user">Switch demo user</string>
+    <string name="no_playlists_yet">No playlists yet</string>
+    <string name="no_playlists_desc">World, local, and your own playlists will show up here.</string>
+    <string name="demo_user_picker_title">No auth system yet — pick a demo user to act as:</string>
+    <string name="premium">Premium</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
+    <string name="btn_follow">Follow</string>
+    <string name="btn_unfollow">Unfollow</string>
+    <string name="chat_input_hint">Message</string>
+    <string name="tap_to_chat_hint">Tap to open chat</string>
+    <string name="nav_discover_users">Discover People</string>
 </resources>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack // ایمپورت جدید برای دکمه بازگشت
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,16 +28,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Playlist
-import com.hipka.app.presentation.common.shimmerEffect // استفاده از افکت شیمر مشترک گروه شما
+import com.hipka.app.presentation.common.shimmerEffect
 import com.hipka.app.presentation.theme.HipkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistsScreen(
-    onPlaylistClick: (String) -> Unit = {}, // اکشن کلیک برای باز کردن جزئیات پلی‌لیست
+    onPlaylistClick: (String) -> Unit = {},
+    onBackClick: (() -> Unit)? = null, // ✨ اضافه شدن اکشن بک به صورت آپشنال برای حل باگ برگشت به هوم
     viewModel: PlaylistsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val globalSectionTitle = stringResource(id = R.string.home_section_global_playlists)
+    val localSectionTitle = stringResource(id = R.string.home_section_local_playlists)
+    val userSectionTitle = stringResource(id = R.string.home_quick_playlists)
 
     Scaffold(
         topBar = {
@@ -47,6 +53,17 @@ fun PlaylistsScreen(
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
+                },
+                // ✨ اگر دکمه بک پاس داده شده باشد، فلش بازگشت هوشمند نمایش داده می‌شود
+                navigationIcon = {
+                    if (onBackClick != null) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    }
                 }
             )
         }
@@ -57,10 +74,8 @@ fun PlaylistsScreen(
                 .padding(innerPadding)
         ) {
             when {
-                // ۱. افکت لودینگ بر اساس ابزار طراحی‌شده توسط هم‌تیمی‌تان
                 uiState.isLoading -> PlaylistsGridShimmer()
 
-                // ۲. نمایش خطای احتمالی شبکه
                 uiState.errorMessage != null -> Box(
                     modifier = Modifier.fillMaxSize().padding(HipkaTheme.dimens.spaceM),
                     contentAlignment = Alignment.Center
@@ -72,12 +87,10 @@ fun PlaylistsScreen(
                     )
                 }
 
-                // ۳. حالت خالی بودن پلی‌لیست‌ها
                 uiState.worldPlaylists.isEmpty() && uiState.localPlaylists.isEmpty() && uiState.userPlaylists.isEmpty() -> {
                     PlaylistsEmptyState()
                 }
 
-                // ۴. نمایش کارت‌ها به صورت ۲ ستونه بر اساس رنگ‌بندی داینامیک تم
                 else -> LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
@@ -85,23 +98,22 @@ fun PlaylistsScreen(
                     verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM),
                     horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM)
                 ) {
-                    // --- الف) موسیقی جهان ---
                     playlistSection(
-                        title = "World music",
+                        title = globalSectionTitle,
                         playlists = uiState.worldPlaylists,
                         onPlaylistClick = onPlaylistClick,
                         indexOffset = 0
                     )
-                    // --- ب) موسیقی داخلی ---
+
                     playlistSection(
-                        title = "Local music",
+                        title = localSectionTitle,
                         playlists = uiState.localPlaylists,
                         onPlaylistClick = onPlaylistClick,
                         indexOffset = uiState.worldPlaylists.size
                     )
-                    // --- ج) پلی‌لیست‌های شخصی کاربر ---
+
                     playlistSection(
-                        title = "Your playlists",
+                        title = userSectionTitle,
                         playlists = uiState.userPlaylists,
                         onPlaylistClick = onPlaylistClick,
                         indexOffset = uiState.worldPlaylists.size + uiState.localPlaylists.size
@@ -143,7 +155,6 @@ private fun PlaylistCard(
     index: Int,
     onClick: () -> Unit
 ) {
-    // انتخاب پویای گرادیانت‌های رنگی از پالت تم بدون نوشتن مقادیر هگزادسیمال متفرقه
     val cardBackground = when (index % 3) {
         0 -> MaterialTheme.colorScheme.primaryContainer
         1 -> MaterialTheme.colorScheme.secondaryContainer
@@ -216,7 +227,7 @@ private fun PlaylistsGridShimmer() {
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .clip(MaterialTheme.shapes.medium)
-                        .shimmerEffect() // اعمال مودیفایر انیمیشن شیمر هم‌گروهی‌ات
+                        .shimmerEffect()
                 )
                 Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
                 Box(
@@ -248,12 +259,12 @@ private fun PlaylistsEmptyState() {
         )
         Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
         Text(
-            text = "No playlists yet",
+            text = stringResource(id = R.string.no_playlists_yet),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
         Text(
-            text = "World, local, and your own playlists will show up here.",
+            text = stringResource(id = R.string.no_playlists_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
