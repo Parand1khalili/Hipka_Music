@@ -14,15 +14,26 @@ import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.PlayerRepository
 import com.hipka.app.service.PlaybackService
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+
+// طول محو صدا در ابتدا/انتهای هر آهنگ (میلی‌ثانیه)
+private const val CROSSFADE_DURATION_MS = 3000L
+private const val CROSSFADE_TICK_MS = 200L
 
 @Singleton
 class PlayerRepositoryImpl @Inject constructor(
@@ -33,6 +44,9 @@ class PlayerRepositoryImpl @Inject constructor(
 
     // آهنگ‌های صف فعلی، برای بازیابی Song کامل هنگام تغییر آیتم در پلیر (چون MediaItem فقط metadata محدود دارد)
     private var queuedSongsById: Map<String, Song> = emptyMap()
+
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var crossfadeJob: Job? = null
 
     private val _isPlaying = MutableStateFlow(false)
     override val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -73,6 +87,43 @@ class PlayerRepositoryImpl @Inject constructor(
         }.also {
             it.addListener(playerListener)
             mediaController = it
+            startCrossfadeMonitor(it)
+        }
+    }
+
+    private fun startCrossfadeMonitor(controller: MediaController) {
+        crossfadeJob?.cancel()
+        crossfadeJob = repositoryScope.launch {
+            while (isActive) {
+                delay(CROSSFADE_TICK_MS)
+                applyCrossfadeVolume(controller)
+            }
+        }
+    }
+
+    private fun applyCrossfadeVolume(controller: MediaController) {
+        if (!controller.isPlaying) return
+
+        val duration = controller.duration
+        if (duration <= 0) return
+
+        val position = controller.currentPosition
+        val remaining = duration - position
+
+        val targetVolume = when {
+            // محو ورود: شروع هر آهنگ (از جمله اولین آهنگ صف) با صدای کم شروع و در چند ثانیه به حداکثر می‌رسد
+            position < CROSSFADE_DURATION_MS ->
+                (position.toFloat() / CROSSFADE_DURATION_MS).coerceIn(0f, 1f)
+
+            // محو خروج: فقط اگر آهنگ بعدی در صف وجود دارد، صدا در ثانیه‌های پایانی کم می‌شود
+            remaining < CROSSFADE_DURATION_MS && controller.hasNextMediaItem() ->
+                (remaining.toFloat() / CROSSFADE_DURATION_MS).coerceIn(0f, 1f)
+
+            else -> 1f
+        }
+
+        if (controller.volume != targetVolume) {
+            controller.volume = targetVolume
         }
     }
 
@@ -87,6 +138,7 @@ class PlayerRepositoryImpl @Inject constructor(
         val safeStartIndex = startIndex.coerceIn(songs.indices)
 
         controller().apply {
+            volume = 0f
             setMediaItems(songs.map { it.toMediaItem() }, safeStartIndex, 0L)
             prepare()
             play()
