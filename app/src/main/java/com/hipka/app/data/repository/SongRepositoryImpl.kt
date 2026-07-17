@@ -1,32 +1,33 @@
 package com.hipka.app.data.repository
 
+import com.hipka.app.core.network.NetworkMonitor
 import com.hipka.app.data.local.dao.SongDao
 import com.hipka.app.data.local.entity.LocalSongEntity
 import com.hipka.app.data.local.entity.RecentSongEntity
 import com.hipka.app.data.remote.api.SongApi
 import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.SongRepository
+import com.hipka.app.data.local.dao.SearchHistoryDao
+import com.hipka.app.data.local.entity.SearchHistoryEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+import com.hipka.app.data.local.datastore.SessionManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import com.hipka.app.data.local.entity.LocalUserLikeEntity
+import com.hipka.app.data.remote.api.ToggleLikeRequest
 
 class SongRepositoryImpl @Inject constructor(
     private val songApi: SongApi,
-    private val songDao: SongDao
+    private val songDao: SongDao,
+    private val searchHistoryDao: SearchHistoryDao,
+    private val networkMonitor: NetworkMonitor,
+    private val sessionManager: SessionManager
 ) : SongRepository {
-
-    /* ====================================================================
-       UNCOMMENT THIS BLOCK FOR OFFLINE TESTING (MOCK DATA WITH POPULARITY & DATES)
-       ====================================================================
-    private val mockSongs = listOf(
-        Song(id = "mock-1", title = "Midnight City", artistName = "M83", coverImageUrl = "https://picsum.photos/200/200?random=1", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", playCount = 15200, releaseDate = "2026-01-10", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-2", title = "Starboy", artistName = "The Weeknd", coverImageUrl = "https://picsum.photos/200/200?random=2", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", playCount = 98500, releaseDate = "2025-11-25", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-3", title = "Blinding Lights", artistName = "The Weeknd", coverImageUrl = "https://picsum.photos/200/200?random=3", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", playCount = 125000, releaseDate = "2026-05-14", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-4", title = "Sweater Weather", artistName = "The Neighbourhood", coverImageUrl = "https://picsum.photos/200/200?random=4", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", playCount = 45000, releaseDate = "2024-08-19", isLiked = false, isDownloaded = false, localFilePath = null),
-        Song(id = "mock-5", title = "Do I Wanna Know?", artistName = "Arctic Monkeys", coverImageUrl = "https://picsum.photos/200/200?random=5", audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", playCount = 74100, releaseDate = "2026-07-01", isLiked = false, isDownloaded = false, localFilePath = null)
-    )
-    ==================================================================== */
 
     override fun getSongs(): Flow<List<Song>> = flow {
         try {
@@ -39,6 +40,7 @@ class SongRepositoryImpl @Inject constructor(
                     coverImageUrl = dto.coverImageUrl,
                     audioUrl = dto.audioUrl,
                     playCount = dto.playCount ?: 0,
+                    likesCount = dto.likesCount ?: 0,
                     releaseDate = dto.releaseDate ?: ""
                 )
             }
@@ -46,8 +48,6 @@ class SongRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("REPO_ERROR", "Network failed. Emitting empty list. Cause: ${e.message}")
             emit(emptyList())
-            // UNCOMMENT FOR OFFLINE TESTING:
-            // emit(mockSongs)
         }
     }
 
@@ -57,8 +57,6 @@ class SongRepositoryImpl @Inject constructor(
             return localSong.toDomainModel()
         }
         return null
-        // UNCOMMENT FOR OFFLINE TESTING:
-        // return mockSongs.find { it.id == id }
     }
 
     override suspend fun searchSongs(query: String): List<Song> {
@@ -74,69 +72,176 @@ class SongRepositoryImpl @Inject constructor(
                     coverImageUrl = dto.coverImageUrl,
                     audioUrl = dto.audioUrl,
                     playCount = dto.playCount ?: 0,
+                    likesCount = dto.likesCount ?: 0,
                     releaseDate = dto.releaseDate ?: ""
                 )
             }
         } catch (e: Exception) {
             android.util.Log.e("REPO_ERROR", "Search query failed. Returning empty list.")
             emptyList()
-            // UNCOMMENT FOR OFFLINE TESTING:
-            /*
-            return mockSongs.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                it.artistName.contains(query, ignoreCase = true)
-            }
-            */
         }
     }
 
-
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getLikedSongs(): Flow<List<Song>> {
-        return songDao.getLikedSongs().map { localSongs ->
-            localSongs.map { it.toDomainModel() }
+        return sessionManager.currentUserId.flatMapLatest { userId ->
+            if (userId.isNullOrBlank()) {
+                flowOf(emptyList())
+            } else {
+                songDao.getLikedSongsForUser(userId).map { localSongs ->
+                    localSongs.map { it.toDomainModel() }
+                }
+            }
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getRecentlyPlayedSongs(): Flow<List<Song>> {
-        return songDao.getRecentlyPlayedSongs().map { localSongs ->
-            localSongs.map { it.toDomainModel() }
+        return sessionManager.currentUserId.flatMapLatest { userId ->
+            if (userId.isNullOrBlank()) {
+                flowOf(emptyList())
+            } else {
+                songDao.getRecentlyPlayedSongsForUser(userId).map { localSongs ->
+                    localSongs.map { it.toDomainModel() }
+                }
+            }
         }
     }
 
-    override suspend fun toggleLike(songId: String) {
-        val song = songDao.getSongById(songId)
-        if (song != null) {
-            songDao.updateLikeStatus(songId, !song.isLiked)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observeLikedSongIds(): Flow<List<String>> {
+        return sessionManager.currentUserId.flatMapLatest { userId ->
+            if (userId.isNullOrBlank()) flowOf(emptyList())
+            else songDao.getLikedSongIdsForUser(userId)
         }
     }
 
-    override suspend fun addToRecentlyPlayed(song: Song) {
-        val existingSong = songDao.getSongById(song.id)
-        if (existingSong == null) {
+    override suspend fun toggleAndInsertLike(song: Song) {
+        val currentUserId = sessionManager.currentUserId.first()
+        if (currentUserId.isNullOrBlank()) {
+            android.util.Log.e("LIKE_SYSTEM", "No user logged in!")
+            return
+        }
+
+        val isCurrentlyLiked = songDao.isSongLikedByUser(currentUserId, song.id)
+        val newLikeStatus = !isCurrentlyLiked
+
+        if (songDao.getSongById(song.id) == null) {
             songDao.insertSong(
                 LocalSongEntity(
-                    id = song.id,
-                    title = song.title,
-                    artistName = song.artistName,
-                    coverImageUrl = song.coverImageUrl,
-                    audioUrl = song.audioUrl,
-                    playCount = song.playCount,
-                    releaseDate = song.releaseDate,
-                    isLiked = song.isLiked,
-                    isDownloaded = song.isDownloaded,
-                    localFilePath = song.localFilePath
+                    id = song.id, title = song.title, artistName = song.artistName,
+                    coverImageUrl = song.coverImageUrl, audioUrl = song.audioUrl,
+                    playCount = song.playCount, likesCount = song.likesCount,
+                    releaseDate = song.releaseDate, isLiked = false, isDownloaded = false, localFilePath = null
                 )
             )
         }
 
-        val recentSong = RecentSongEntity(
-            songId = song.id,
-            timestamp = System.currentTimeMillis()
-        )
-        songDao.insertRecentSong(recentSong)
+        if (newLikeStatus) {
+            songDao.insertUserLike(LocalUserLikeEntity(currentUserId, song.id))
+        } else {
+            songDao.deleteUserLike(currentUserId, song.id)
+        }
+
+        try {
+            val isOnline = networkMonitor.isOnline.first()
+            if (isOnline) {
+                val response = songApi.toggleSongLikeRemote(
+                    ToggleLikeRequest(
+                        pUserId = currentUserId,
+                        pSongId = song.id,
+                        pIsLiked = newLikeStatus
+                    )
+                )
+
+                if (response.isSuccessful) {
+                    android.util.Log.d("SUPABASE_SYNC", "Like synced with Supabase for user: $currentUserId")
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    android.util.Log.e("SUPABASE_SYNC", "Supabase rejected the like! Error: $errorBody")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SUPABASE_SYNC", "Failed to sync like status: ${e.message}")
+        }
     }
 
-    // متد کمکی برای جلوگیری از تکرار کد و مپ کردن تمیز Entity به Model
+    override suspend fun addToRecentlyPlayed(song: Song) {
+        val currentUserId = sessionManager.currentUserId.first()
+        if (currentUserId.isNullOrBlank()) return
+
+        val existingSong = songDao.getSongById(song.id)
+        if (existingSong == null) {
+            songDao.insertSong(
+                LocalSongEntity(
+                    id = song.id, title = song.title, artistName = song.artistName,
+                    coverImageUrl = song.coverImageUrl, audioUrl = song.audioUrl,
+                    playCount = song.playCount, likesCount = song.likesCount,
+                    releaseDate = song.releaseDate, isLiked = false, isDownloaded = false, localFilePath = null
+                )
+            )
+        }
+
+        songDao.insertRecentSong(
+            RecentSongEntity(
+                userId = currentUserId,
+                songId = song.id,
+                timestamp = System.currentTimeMillis()
+            )
+        )
+
+        try {
+            val isOnline = networkMonitor.isOnline.first()
+            if (isOnline) {
+                songApi.incrementPlayCount(mapOf("p_song_id" to song.id))
+                android.util.Log.d("SUPABASE_SYNC", "Play count incremented on server.")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SUPABASE_SYNC", "Failed to increment play count: ${e.message}")
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getSearchHistory(): Flow<List<String>> {
+        return sessionManager.currentUserId.flatMapLatest { userId ->
+            if (userId.isNullOrBlank()) {
+                flowOf(emptyList())
+            } else {
+                searchHistoryDao.getSearchHistoryForUser(userId).map { entities ->
+                    entities.map { it.query }
+                }
+            }
+        }
+    }
+
+    override suspend fun saveSearchQuery(query: String) {
+        if (query.isBlank()) return
+
+        val currentUserId = sessionManager.currentUserId.first()
+        if (!currentUserId.isNullOrBlank()) {
+            val entity = SearchHistoryEntity(
+                userId = currentUserId,
+                query = query,
+                timestamp = System.currentTimeMillis()
+            )
+            searchHistoryDao.insertSearchQuery(entity)
+        }
+    }
+
+    override suspend fun deleteSearchQuery(query: String) {
+        val currentUserId = sessionManager.currentUserId.first()
+        if (!currentUserId.isNullOrBlank()) {
+            searchHistoryDao.deleteSearchQuery(currentUserId, query)
+        }
+    }
+
+    override suspend fun clearAllSearchHistory() {
+        val currentUserId = sessionManager.currentUserId.first()
+        if (!currentUserId.isNullOrBlank()) {
+            searchHistoryDao.clearAllHistoryForUser(currentUserId)
+        }
+    }
+
     private fun LocalSongEntity.toDomainModel(): Song {
         return Song(
             id = id,
@@ -145,38 +250,11 @@ class SongRepositoryImpl @Inject constructor(
             coverImageUrl = coverImageUrl,
             audioUrl = audioUrl,
             playCount = playCount,
+            likesCount = likesCount,
             releaseDate = releaseDate,
             isLiked = isLiked,
             isDownloaded = isDownloaded,
             localFilePath = localFilePath
         )
-    }
-
-    override fun observeLikedSongIds(): Flow<List<String>> {
-        return songDao.getLikedSongIds()
-    }
-
-    override suspend fun toggleAndInsertLike(song: Song) {
-        val existingSong = songDao.getSongById(song.id)
-        if (existingSong != null) {
-            // اگر آهنگ قبلاً در دیتابیس بود، وضعیتش را برعکس کن
-            songDao.updateLikeStatus(song.id, !existingSong.isLiked)
-        } else {
-            // اگر آهنگ از اینترنت آمده بود و در دیتابیس نبود، آن را ثبت و لایک کن
-            songDao.insertSong(
-                LocalSongEntity(
-                    id = song.id,
-                    title = song.title,
-                    artistName = song.artistName,
-                    coverImageUrl = song.coverImageUrl,
-                    audioUrl = song.audioUrl,
-                    playCount = song.playCount,
-                    releaseDate = song.releaseDate,
-                    isLiked = true,
-                    isDownloaded = song.isDownloaded,
-                    localFilePath = song.localFilePath
-                )
-            )
-        }
     }
 }

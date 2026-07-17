@@ -53,11 +53,15 @@ fun HipkaBottomBar(navController: NavHostController) {
                 selected = selected,
                 onClick = {
                     navController.navigate(entry.screen.route) {
+                        // پاک کردن پشته صفحات تا ریشه اصلی گراف برنامه
                         popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                            // تغییر مهم: وضعیت صفحات فرعی (مثل لایک‌ها) را ذخیره نکن تا هوم ریست شود
+                            saveState = false
                         }
+                        // جلوگیری از باز شدن چند باره یک صفحه تکراری روی هم
                         launchSingleTop = true
-                        restoreState = true
+                        // تغییر مهم: وضعیت قبلی را بازیابی نکن تا همیشه به ریشه اصلی تب هدایت شویم
+                        restoreState = false
                     }
                 },
                 icon = {

@@ -22,7 +22,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.People // ایمپورت آیکون مردم برای دکمه پیدا کردن دوستان
+import androidx.compose.material.icons.filled.People // ✨ ویژگی کیانا: ایمپورت آیکون مردم برای دکمه پیدا کردن دوستان
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,7 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton // ایمپورت دکمه اوت‌لایند
+import androidx.compose.material3.OutlinedButton // ویژگی کیانا: ایمپورت دکمه اوت‌لایند
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,7 +58,7 @@ fun SearchScreen(
     likedSongIds: Set<String>,
     onSongClick: (Song) -> Unit,
     onLikeClick: (Song) -> Unit,
-    onNavigateToDiscoverUsers: () -> Unit, // ✨ پارامتر جدید ناوبری برای اتصال به هاب اکتشاف کاربران
+    onNavigateToDiscoverUsers: () -> Unit, // ✨ ویژگی کیانا: پارامتر جدید ناوبری برای اتصال به هاب اکتشاف کاربران
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,7 +118,7 @@ fun SearchScreen(
             )
         }
 
-        // ✨ شاهکار سناریوی جدید UX: دکمه شیک پیدا کردن دوستان فقط زمانی که باکس سرچ خالی است نمایش داده می‌شود
+        // ✨ شاهکار سناریوی جدید UX (ویژگی کیانا): دکمه شیک پیدا کردن دوستان فقط زمانی که باکس سرچ خالی است نمایش داده/لود می‌شود
         if (uiState.searchQuery.isEmpty()) {
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
             OutlinedButton(
@@ -138,7 +138,7 @@ fun SearchScreen(
 
         Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
 
-        // مدیریت وضعیت‌های مختلف صفحه سرچ
+        // مدیریت وضعیت‌های مختلف صفحه سرچ (بر اساس معماری بدون ارور شما)
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -211,7 +211,7 @@ fun SearchScreen(
 
 @Composable
 private fun SearchHistoryItem(
-    item: SearchHistoryEntity,
+    item: SearchHistoryEntity, // حفظ تغییر شما به Entity (نکته کیانا: نسخه تو دریافت مستقیم استرینگ برای حل قطعی ارورهای دیتا تایپ بود)
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {

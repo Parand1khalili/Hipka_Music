@@ -51,7 +51,10 @@ class LikedSongsViewModel @Inject constructor(
         when (intent) {
             is LikedSongsIntent.ToggleLike -> {
                 viewModelScope.launch {
-                    songRepository.toggleLike(intent.songId)
+                    val song = _state.value.songs.find { it.id == intent.songId }
+                    if (song != null) {
+                        songRepository.toggleAndInsertLike(song)
+                    }
                 }
             }
         }

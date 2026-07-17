@@ -11,7 +11,7 @@ data class SearchUiState(
     val searchQuery: String = "",
     val rawSearchResults: List<Song> = emptyList(), // Keeps the unfiltered network response
     val searchResults: List<Song> = emptyList(),    // The filtered list sent to UI
-    val searchHistory: List<SearchHistoryEntity> = emptyList(),
+    val searchHistory: List<String> = emptyList(),
     val selectedFilter: SearchFilter = SearchFilter.ALL,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,

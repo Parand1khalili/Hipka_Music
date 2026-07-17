@@ -19,6 +19,9 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import com.hipka.app.core.network.NetworkMonitor
+import com.hipka.app.data.local.dao.SearchHistoryDao
+import com.hipka.app.data.local.datastore.SessionManager
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -72,8 +75,17 @@ object AppModule {
     @Singleton
     fun provideSongRepository(
         songApi: SongApi,
-        songDao: SongDao
+        songDao: SongDao,
+        searchHistoryDao: SearchHistoryDao,
+        networkMonitor: NetworkMonitor,
+        sessionManager: SessionManager
     ): SongRepository {
-        return SongRepositoryImpl(songApi, songDao)
+        return SongRepositoryImpl(
+            songApi,
+            songDao,
+            searchHistoryDao,
+            networkMonitor,
+            sessionManager
+        )
     }
 }

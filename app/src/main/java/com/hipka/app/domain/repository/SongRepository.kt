@@ -10,9 +10,11 @@ interface SongRepository {
 
     fun getLikedSongs(): Flow<List<Song>>
     fun getRecentlyPlayedSongs(): Flow<List<Song>>
-    suspend fun toggleLike(songId: String)
-    suspend fun addToRecentlyPlayed(song: Song)
-
     fun observeLikedSongIds(): Flow<List<String>>
     suspend fun toggleAndInsertLike(song: Song)
+    suspend fun addToRecentlyPlayed(song: Song)
+    fun getSearchHistory(): Flow<List<String>>
+    suspend fun saveSearchQuery(query: String)
+    suspend fun deleteSearchQuery(query: String)
+    suspend fun clearAllSearchHistory()
 }
