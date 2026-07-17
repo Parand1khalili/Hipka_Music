@@ -10,6 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.hipka.app.domain.model.PlaybackProgress
 import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.PlayerRepository
 import com.hipka.app.service.PlaybackService
@@ -54,6 +55,9 @@ class PlayerRepositoryImpl @Inject constructor(
     private val _currentSong = MutableStateFlow<Song?>(null)
     override val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
+    private val _progress = MutableStateFlow(PlaybackProgress())
+    override val progress: StateFlow<PlaybackProgress> = _progress.asStateFlow()
+
     private val _playbackErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
     override val playbackErrors: SharedFlow<String> = _playbackErrors
 
@@ -87,18 +91,27 @@ class PlayerRepositoryImpl @Inject constructor(
         }.also {
             it.addListener(playerListener)
             mediaController = it
-            startCrossfadeMonitor(it)
+            startPlaybackTicker(it)
         }
     }
 
-    private fun startCrossfadeMonitor(controller: MediaController) {
+    private fun startPlaybackTicker(controller: MediaController) {
         crossfadeJob?.cancel()
         crossfadeJob = repositoryScope.launch {
             while (isActive) {
                 delay(CROSSFADE_TICK_MS)
                 applyCrossfadeVolume(controller)
+                updateProgress(controller)
             }
         }
+    }
+
+    private fun updateProgress(controller: MediaController) {
+        val duration = controller.duration.coerceAtLeast(0L)
+        _progress.value = PlaybackProgress(
+            positionMs = controller.currentPosition.coerceAtLeast(0L),
+            durationMs = duration
+        )
     }
 
     private fun applyCrossfadeVolume(controller: MediaController) {
@@ -160,6 +173,12 @@ class PlayerRepositoryImpl @Inject constructor(
 
     override suspend fun skipToPrevious() {
         controller().seekToPreviousMediaItem()
+    }
+
+    override suspend fun seekTo(positionMs: Long) {
+        val controller = controller()
+        controller.seekTo(positionMs)
+        updateProgress(controller)
     }
 }
 

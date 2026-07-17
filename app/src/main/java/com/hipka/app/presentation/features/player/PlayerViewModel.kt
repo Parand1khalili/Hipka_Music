@@ -34,6 +34,11 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { it.copy(currentSong = song) }
             }
         }
+        viewModelScope.launch {
+            playerRepository.progress.collect { progress ->
+                _uiState.update { it.copy(progress = progress) }
+            }
+        }
     }
 
     fun onIntent(intent: PlayerIntent) {
@@ -43,6 +48,7 @@ class PlayerViewModel @Inject constructor(
             PlayerIntent.TogglePlayPause -> togglePlayPause()
             PlayerIntent.SkipNext -> skipToNext()
             PlayerIntent.SkipPrevious -> skipToPrevious()
+            is PlayerIntent.SeekTo -> seekTo(intent.positionMs)
         }
     }
 
@@ -70,5 +76,9 @@ class PlayerViewModel @Inject constructor(
 
     private fun skipToPrevious() {
         viewModelScope.launch { playerRepository.skipToPrevious() }
+    }
+
+    private fun seekTo(positionMs: Long) {
+        viewModelScope.launch { playerRepository.seekTo(positionMs) }
     }
 }

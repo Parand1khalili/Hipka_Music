@@ -1,10 +1,12 @@
 package com.hipka.app.presentation.features.player
 
+import com.hipka.app.domain.model.PlaybackProgress
 import com.hipka.app.domain.model.Song
 
 data class PlayerUiState(
     val currentSong: Song? = null,
-    val isPlaying: Boolean = false
+    val isPlaying: Boolean = false,
+    val progress: PlaybackProgress = PlaybackProgress()
 )
 
 sealed interface PlayerIntent {
@@ -13,4 +15,5 @@ sealed interface PlayerIntent {
     data object TogglePlayPause : PlayerIntent
     data object SkipNext : PlayerIntent
     data object SkipPrevious : PlayerIntent
+    data class SeekTo(val positionMs: Long) : PlayerIntent
 }
