@@ -149,6 +149,10 @@ fun HipkaNavGraph(
                     },
                     onLikeClick = { song ->
                         songInteractionViewModel.toggleLike(song)
+                    },
+                    // ✨ اتصال هاب سرچ به صفحه کشف عمومی کاربران (پیدا کردن دوستان)
+                    onNavigateToDiscoverUsers = {
+                        navController.navigate("followed_users/discover")
                     }
                 )
             }
@@ -167,20 +171,32 @@ fun HipkaNavGraph(
                 ProfileScreen(
                     mainUiState = mainUiState,
                     onMainIntent = onMainIntent,
-                    onNavigateToFollowedUsers = { navController.navigate(Screen.FollowedUsers.route) }
+                    // ✨ اصلاح ناوبری پروفایل: ارسال هوشمند نوع کلیک (فالوور یا فالووینگ) به لایه بعد
+                    onNavigateToFollowedUsers = { type ->
+                        navController.navigate("followed_users/$type")
+                    }
                 )
             }
 
             // --- Secondary destinations ----------------------------------
             composable(Screen.NowPlaying.route) { PlaceholderScreen("Now Playing") }
+
+            // ✨ اصلاح باگ آدرس‌دهی مقصد کاتلین جهت رفع ارور کامپایل با افزودن رفرنس Screen
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }
 
-            composable(Screen.FollowedUsers.route) {
+            // تبدیل به مسیر داینامیک پارامتریک جهت تفکیک کامل لایه نمایش فالوور، فالووینگ و دیسکاور
+            composable(
+                route = "followed_users/{type}",
+                arguments = listOf(navArgument("type") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val type = backStackEntry.arguments?.getString("type") ?: "following"
+
                 FollowedUsersScreen(
+                    viewType = type,
                     onOpenChat = { peerId ->
                         navController.navigate(Screen.ChatConversation.createRoute(peerId))
                     },
-                    onBackClick = { navController.popBackStack() } // ✨ حل ارور اول: پاس دادن دکمه بازگشت برای لیست یوزرها
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 
@@ -211,7 +227,7 @@ fun HipkaNavGraph(
                 arguments = listOf(navArgument(Screen.ChatConversation.ARG_PEER_USER_ID) { type = NavType.StringType })
             ) {
                 ChatScreen(
-                    onBackClick = { navController.popBackStack() } // ✨ حل ارور دوم: پاس دادن دکمه بازگشت برای داخل صفحه چت
+                    onBackClick = { navController.popBackStack() }
                 )
             }
         }

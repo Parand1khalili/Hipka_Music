@@ -4,7 +4,9 @@ import com.hipka.app.domain.model.User
 
 data class ProfileUiState(
     val currentUser: User? = null,
-    val allUsers: List<User> = emptyList(), // demo "sign in as" list until real auth exists
+    val allUsers: List<User> = emptyList(),
+    val followingIds: Set<String> = emptySet(),
+    val followerIds: Set<String> = emptySet(), // ✨ اضافه شدن لیست زنده فالوورها
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )

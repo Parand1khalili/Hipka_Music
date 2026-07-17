@@ -73,4 +73,10 @@
     <string name="chat_input_hint">Message</string>
     <string name="tap_to_chat_hint">Tap to open chat</string>
     <string name="nav_discover_users">Discover People</string>
+    <string name="followers">Followers</string>
+    <string name="following">Following</string>
+    <string name="search_find_friends">Find Friends</string>
+    <string name="no_followers_found">No followers found</string>
+    <string name="no_following_found">No following found</string>
+    <string name="no_users_found">No users found</string>
 </resources>

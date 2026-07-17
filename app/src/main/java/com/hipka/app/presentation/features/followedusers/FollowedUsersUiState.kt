@@ -5,6 +5,7 @@ import com.hipka.app.domain.model.User
 data class FollowedUsersUiState(
     val users: List<User> = emptyList(),
     val followingIds: Set<String> = emptySet(),
+    val followerIds: Set<String> = emptySet(), // ✨ اضافه شدن فیلد فالوورها برای حذف ارور کامپایل و واقعی‌سازی کامل
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )

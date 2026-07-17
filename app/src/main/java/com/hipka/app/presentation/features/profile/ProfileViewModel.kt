@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.hipka.app.data.local.datastore.SessionManager
 import com.hipka.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +41,9 @@ class ProfileViewModel @Inject constructor(
     }
 
     private suspend fun loadDemoUserPicker() {
-        _uiState.update { it.copy(isLoading = true, currentUser = null, errorMessage = null) }
+        _uiState.update {
+            it.copy(isLoading = true, currentUser = null, followingIds = emptySet(), followerIds = emptySet(), errorMessage = null)
+        }
         runCatching { userRepository.getAllUsers() }
             .onSuccess { users -> _uiState.update { it.copy(allUsers = users, isLoading = false) } }
             .onFailure { e -> _uiState.update { it.copy(isLoading = false, errorMessage = e.message) } }
@@ -47,9 +51,26 @@ class ProfileViewModel @Inject constructor(
 
     private suspend fun loadCurrentUser(userId: String) {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        runCatching { userRepository.getUserById(userId) }
-            .onSuccess { user -> _uiState.update { it.copy(currentUser = user, isLoading = false) } }
-            .onFailure { e -> _uiState.update { it.copy(isLoading = false, errorMessage = e.message) } }
+        runCatching {
+            coroutineScope {
+                val userDeferred = async { userRepository.getUserById(userId) }
+                val followingDeferred = async { userRepository.getFollowingIds(userId) }
+                val followerDeferred = async { userRepository.getFollowerIds(userId) } // ✨ واکشی موازی فالوورها
+
+                Triple(userDeferred.await(), followingDeferred.await(), followerDeferred.await())
+            }
+        }.onSuccess { (user, followingIds, followerIds) ->
+            _uiState.update {
+                it.copy(
+                    currentUser = user,
+                    followingIds = followingIds.toSet(),
+                    followerIds = followerIds.toSet(), // ✨ قرارگیری در استیت لایه فرانت
+                    isLoading = false
+                )
+            }
+        }.onFailure { e ->
+            _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+        }
     }
 
     private fun selectDemoUser(userId: String) {

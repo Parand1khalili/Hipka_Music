@@ -15,25 +15,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,10 +50,15 @@ import com.hipka.app.presentation.theme.HipkaTheme
 fun ProfileScreen(
     mainUiState: MainUiState,
     onMainIntent: (MainIntent) -> Unit,
-    onNavigateToFollowedUsers: () -> Unit,
+    onNavigateToFollowedUsers: (String) -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // ✨ هماهنگ‌سازی لایف‌سایکل: هربار کاربر وارد این تب می‌شود، اطلاعات به صورت زنده ریفرش می‌شوند
+    LaunchedEffect(Unit) {
+        viewModel.onIntent(ProfileIntent.Retry)
+    }
 
     when {
         uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -67,6 +70,7 @@ fun ProfileScreen(
         )
         else -> ProfileContent(
             user = uiState.currentUser!!,
+            uiState = uiState,
             mainUiState = mainUiState,
             onMainIntent = onMainIntent,
             onNavigateToFollowedUsers = onNavigateToFollowedUsers,
@@ -75,11 +79,6 @@ fun ProfileScreen(
     }
 }
 
-/**
- * The project has no auth screen anywhere in its spec, so this stands in for
- * one: pick which `users` row to act as. Swap for a real login flow later —
- * everything downstream only depends on SessionManager.currentUserId.
- */
 @Composable
 private fun DemoUserPicker(users: List<User>, onPick: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(HipkaTheme.dimens.spaceM)) {
@@ -105,9 +104,10 @@ private fun DemoUserPicker(users: List<User>, onPick: (String) -> Unit) {
 @Composable
 private fun ProfileContent(
     user: User,
+    uiState: ProfileUiState,
     mainUiState: MainUiState,
     onMainIntent: (MainIntent) -> Unit,
-    onNavigateToFollowedUsers: () -> Unit,
+    onNavigateToFollowedUsers: (String) -> Unit,
     onLogout: () -> Unit
 ) {
     Column(
@@ -124,13 +124,37 @@ private fun ProfileContent(
             AssistChip(onClick = {}, label = { Text(stringResource(id = R.string.premium)) })
         }
 
-        Spacer(Modifier.height(HipkaTheme.dimens.spaceL))
+        Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
 
-        Button(onClick = onNavigateToFollowedUsers, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.People, contentDescription = null)
-            Spacer(Modifier.width(HipkaTheme.dimens.spaceS))
-            // ✨ اصلاح باگ UX: متصل شدن متن دکمه به استرینگ داینامیک جدید (Discover People / کشف کاربران)
-            Text(stringResource(id = R.string.nav_discover_users))
+        // 📊 بخش آمار فالوور و فالووینگ با استایل کاملاً همسان، بولد و زیبا
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // کلیک روی فالوورها
+            Text(
+                text = "${uiState.followerIds.size} ${stringResource(id = R.string.followers)}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable { onNavigateToFollowedUsers("followers") }
+                    .padding(HipkaTheme.dimens.spaceXS)
+            )
+            Text(
+                text = "•",
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+            // کلیک روی فالووینگ‌ها
+            Text(
+                text = "${uiState.followingIds.size} ${stringResource(id = R.string.following)}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable { onNavigateToFollowedUsers("following") }
+                    .padding(HipkaTheme.dimens.spaceXS)
+            )
         }
 
         Spacer(Modifier.height(HipkaTheme.dimens.spaceL))

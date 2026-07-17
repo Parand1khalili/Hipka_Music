@@ -55,7 +55,7 @@
     <string name="no_recent_songs_desc">آهنگ‌هایی که گوش می‌دهید اینجا ظاهر می‌شوند.</string>
     <string name="followed_users">کاربران دنبال شده</string>
     <string name="language">زبان برنامه</string>
-    <string name="theme">پوسته ظاهر</string>
+    <string name="theme">تم</string>
     <string name="switch_demo_user">تغییر کاربر دمو</string>
     <string name="no_playlists_yet">هنوز پلی‌لیستی وجود ندارد</string>
     <string name="no_playlists_desc">پلی‌لیست‌های جهانی، محلی و شخصی شما در اینجا نمایش داده می‌شوند.</string>
@@ -69,4 +69,10 @@
     <string name="chat_input_hint">پیام خود را بنویسید…</string>
     <string name="tap_to_chat_hint">برای گفتگو ضربه بزنید</string>
     <string name="nav_discover_users">کشف کاربران</string>
+    <string name="followers">دنبال‌کننده</string>
+    <string name="following">دنبال‌شونده</string>
+    <string name="search_find_friends">پیدا کردن دوستان</string>
+    <string name="no_followers_found">دنبال‌کننده‌ای یافت نشد</string>
+    <string name="no_following_found">در حال حاضر کسی را دنبال نمی‌کنید</string>
+    <string name="no_users_found">کاربری یافت نشد</string>
 </resources>
