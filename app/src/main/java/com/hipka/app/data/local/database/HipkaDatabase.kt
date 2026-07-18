@@ -10,7 +10,7 @@ import com.hipka.app.data.local.entity.RecentSongEntity
 import com.hipka.app.data.local.entity.LocalUserLikeEntity
 @Database(
     entities = [LocalSongEntity::class, SearchHistoryEntity::class, OfflineMessageEntity::class, RecentSongEntity::class, LocalUserLikeEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class HipkaDatabase : RoomDatabase() {
