@@ -29,6 +29,15 @@
     <!-- Player -->
     <string name="player_play_cd">Play</string>
     <string name="player_pause_cd">Pause</string>
+    <string name="player_skip_next_cd">Next</string>
+    <string name="player_skip_previous_cd">Previous</string>
+    <string name="player_back_cd">Back</string>
+    <string name="player_nothing_playing">Nothing is playing</string>
+    <string name="player_speed_label">Speed: %1$s×</string>
+    <string name="player_speed_cd">Playback speed</string>
+    <string name="player_sleep_timer_cd">Sleep timer</string>
+    <string name="player_sleep_timer_minutes">%d min</string>
+    <string name="player_sleep_timer_off">Turn off</string>
 
     <!-- Search screen -->
     <string name="search_hint">Search songs or artists...</string>

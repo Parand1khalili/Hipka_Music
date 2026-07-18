@@ -29,12 +29,36 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { it.copy(isPlaying = isPlaying) }
             }
         }
+        viewModelScope.launch {
+            playerRepository.currentSong.collect { song ->
+                _uiState.update { it.copy(currentSong = song) }
+            }
+        }
+        viewModelScope.launch {
+            playerRepository.progress.collect { progress ->
+                _uiState.update { it.copy(progress = progress) }
+            }
+        }
+        viewModelScope.launch {
+            playerRepository.sleepTimerRemainingMs.collect { remaining ->
+                _uiState.update { it.copy(sleepTimerRemainingMs = remaining) }
+            }
+        }
+        viewModelScope.launch {
+            playerRepository.playbackSpeed.collect { speed ->
+                _uiState.update { it.copy(playbackSpeed = speed) }
+            }
+        }
     }
 
     fun onIntent(intent: PlayerIntent) {
         when (intent) {
             is PlayerIntent.PlaySong -> playSong(intent.song)
+            is PlayerIntent.PlayQueue -> playQueue(intent.songs, intent.startIndex)
             PlayerIntent.TogglePlayPause -> togglePlayPause()
+            PlayerIntent.SkipNext -> skipToNext()
+            PlayerIntent.SkipPrevious -> skipToPrevious()
+            is PlayerIntent.SeekTo -> seekTo(intent.positionMs)
             is PlayerIntent.ShufflePlayList -> {
                 if (intent.songs.isNotEmpty()) {
                     val shuffledList = intent.songs.shuffled()
@@ -43,13 +67,21 @@ class PlayerViewModel @Inject constructor(
                     // TODO: در صورت نیاز در اسپرینت‌های بعدی کل لیست shuffledList به صف پخش (Queue) ریپازیتوری پاس داده شود.
                 }
             }
+            is PlayerIntent.SetSleepTimer -> playerRepository.startSleepTimer(intent.durationMs)
+            PlayerIntent.CancelSleepTimer -> playerRepository.cancelSleepTimer()
+            is PlayerIntent.SetPlaybackSpeed -> setPlaybackSpeed(intent.speed)
         }
     }
 
     private fun playSong(song: Song) {
-        _uiState.update { it.copy(currentSong = song) }
         viewModelScope.launch {
             playerRepository.playSong(song)
+        }
+    }
+
+    private fun playQueue(songs: List<Song>, startIndex: Int) {
+        viewModelScope.launch {
+            playerRepository.playQueue(songs, startIndex)
         }
     }
 
@@ -57,5 +89,21 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             if (_uiState.value.isPlaying) playerRepository.pause() else playerRepository.resume()
         }
+    }
+
+    private fun skipToNext() {
+        viewModelScope.launch { playerRepository.skipToNext() }
+    }
+
+    private fun skipToPrevious() {
+        viewModelScope.launch { playerRepository.skipToPrevious() }
+    }
+
+    private fun seekTo(positionMs: Long) {
+        viewModelScope.launch { playerRepository.seekTo(positionMs) }
+    }
+
+    private fun setPlaybackSpeed(speed: Float) {
+        viewModelScope.launch { playerRepository.setPlaybackSpeed(speed) }
     }
 }

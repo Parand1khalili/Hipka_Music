@@ -22,7 +22,9 @@ data class Dimens(
 
     val albumCoverS: Dp = 48.dp,
     val albumCoverM: Dp = 120.dp,
-    val albumCoverL: Dp = 280.dp
+    val albumCoverL: Dp = 280.dp,
+
+    val visualizerHeight: Dp = 64.dp
 )
 
 val LocalDimens = staticCompositionLocalOf { Dimens() }

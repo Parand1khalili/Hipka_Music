@@ -33,6 +33,7 @@ import com.hipka.app.presentation.features.home.HomeViewModel
 import com.hipka.app.presentation.features.home.SeeAllScreen
 import com.hipka.app.presentation.features.player.MiniPlayerBar
 import com.hipka.app.presentation.features.player.PlayerIntent
+import com.hipka.app.presentation.features.player.PlayerScreen
 import com.hipka.app.presentation.features.player.PlayerViewModel
 import com.hipka.app.presentation.features.search.SearchScreen
 import com.hipka.app.presentation.features.playlists.PlaylistsScreen
@@ -76,6 +77,7 @@ fun HipkaNavGraph(
                         song = song,
                         isPlaying = playerUiState.isPlaying,
                         onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
+                        onClick = { navController.navigate(Screen.NowPlaying.route) },
                         modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
                     )
                 }
@@ -99,7 +101,12 @@ fun HipkaNavGraph(
                     likedSongIds = likedSongIds,
                     onSongClick = { song ->
                         songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                        // صف پخش را از هر لیستی که آهنگ در آن است می‌سازیم تا Next/Crossfade معنا داشته باشد
+                        val queue = listOf(homeUiState.popularSongs, homeUiState.newReleases, homeUiState.carouselSongs)
+                            .firstOrNull { list -> list.any { it.id == song.id } }
+                            ?: listOf(song)
+                        val startIndex = queue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                        playerViewModel.onIntent(PlayerIntent.PlayQueue(queue, startIndex))
                     },
                     onLikeClick = { song ->
                         songInteractionViewModel.toggleLike(song)
@@ -191,9 +198,13 @@ fun HipkaNavGraph(
             }
 
             // --- Secondary destinations ----------------------------------
-            composable(Screen.NowPlaying.route) { PlaceholderScreen("Now Playing") }
-
-            // ✨ اصلاح باگ آدرس‌دهی مقصد کاتلین جهت رفع ارور کامپایل با افزودن رفرنس Screen
+            composable(Screen.NowPlaying.route) {
+                PlayerScreen(
+                    uiState = playerUiState,
+                    onIntent = { playerViewModel.onIntent(it) },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }
 
             // تبدیل به مسیر داینامیک پارامتریک جهت تفکیک کامل لایه نمایش فالوور، فالووینگ و دیسکاور
