@@ -7,7 +7,8 @@ data class PlayerUiState(
     val currentSong: Song? = null,
     val isPlaying: Boolean = false,
     val progress: PlaybackProgress = PlaybackProgress(),
-    val sleepTimerRemainingMs: Long? = null
+    val sleepTimerRemainingMs: Long? = null,
+    val playbackSpeed: Float = 1f
 )
 
 sealed interface PlayerIntent {
@@ -20,4 +21,5 @@ sealed interface PlayerIntent {
     data class ShufflePlayList(val songs: List<Song>) : PlayerIntent
     data class SetSleepTimer(val durationMs: Long) : PlayerIntent
     data object CancelSleepTimer : PlayerIntent
+    data class SetPlaybackSpeed(val speed: Float) : PlayerIntent
 }

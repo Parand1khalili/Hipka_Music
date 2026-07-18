@@ -67,6 +67,9 @@ class PlayerRepositoryImpl @Inject constructor(
 
     private var sleepTimerJob: Job? = null
 
+    private val _playbackSpeed = MutableStateFlow(1f)
+    override val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
+
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
@@ -206,6 +209,11 @@ class PlayerRepositoryImpl @Inject constructor(
         sleepTimerJob?.cancel()
         sleepTimerJob = null
         _sleepTimerRemainingMs.value = null
+    }
+
+    override suspend fun setPlaybackSpeed(speed: Float) {
+        controller().setPlaybackSpeed(speed)
+        _playbackSpeed.value = speed
     }
 }
 

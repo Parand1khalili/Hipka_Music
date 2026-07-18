@@ -44,6 +44,11 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { it.copy(sleepTimerRemainingMs = remaining) }
             }
         }
+        viewModelScope.launch {
+            playerRepository.playbackSpeed.collect { speed ->
+                _uiState.update { it.copy(playbackSpeed = speed) }
+            }
+        }
     }
 
     fun onIntent(intent: PlayerIntent) {
@@ -64,6 +69,7 @@ class PlayerViewModel @Inject constructor(
             }
             is PlayerIntent.SetSleepTimer -> playerRepository.startSleepTimer(intent.durationMs)
             PlayerIntent.CancelSleepTimer -> playerRepository.cancelSleepTimer()
+            is PlayerIntent.SetPlaybackSpeed -> setPlaybackSpeed(intent.speed)
         }
     }
 
@@ -95,5 +101,9 @@ class PlayerViewModel @Inject constructor(
 
     private fun seekTo(positionMs: Long) {
         viewModelScope.launch { playerRepository.seekTo(positionMs) }
+    }
+
+    private fun setPlaybackSpeed(speed: Float) {
+        viewModelScope.launch { playerRepository.setPlaybackSpeed(speed) }
     }
 }

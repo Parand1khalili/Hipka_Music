@@ -31,6 +31,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -240,8 +241,40 @@ private fun NowPlayingContent(
                 )
             }
         }
+
+        Box(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
+
+        PlaybackSpeedButton(
+            currentSpeed = uiState.playbackSpeed,
+            onSpeedChange = { onIntent(PlayerIntent.SetPlaybackSpeed(it)) }
+        )
     }
 }
+
+private val PLAYBACK_SPEED_OPTIONS = listOf(1f, 1.5f, 2f)
+
+@Composable
+private fun PlaybackSpeedButton(
+    currentSpeed: Float,
+    onSpeedChange: (Float) -> Unit
+) {
+    TextButton(
+        onClick = {
+            // چرخش بین سرعت‌های مجاز: 1x -> 1.5x -> 2x -> 1x
+            val currentIndex = PLAYBACK_SPEED_OPTIONS.indexOfFirst { it == currentSpeed }.coerceAtLeast(0)
+            val nextSpeed = PLAYBACK_SPEED_OPTIONS[(currentIndex + 1) % PLAYBACK_SPEED_OPTIONS.size]
+            onSpeedChange(nextSpeed)
+        }
+    ) {
+        Text(
+            text = stringResource(id = R.string.player_speed_label, formatSpeed(currentSpeed)),
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+private fun formatSpeed(speed: Float): String =
+    if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()
 
 private val SLEEP_TIMER_OPTIONS_MINUTES = listOf(1, 5, 15, 30, 60)
 
