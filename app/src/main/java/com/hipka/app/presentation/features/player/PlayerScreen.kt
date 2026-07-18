@@ -17,13 +17,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -85,10 +89,22 @@ fun PlayerScreen(
                 )
             )
     ) {
-        IconButton(onClick = onBackClick) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(id = R.string.player_back_cd)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(id = R.string.player_back_cd)
+                )
+            }
+
+            SleepTimerButton(
+                remainingMs = uiState.sleepTimerRemainingMs,
+                onSetTimer = { durationMs -> onIntent(PlayerIntent.SetSleepTimer(durationMs)) },
+                onCancelTimer = { onIntent(PlayerIntent.CancelSleepTimer) }
             )
         }
 
@@ -222,6 +238,63 @@ private fun NowPlayingContent(
                     contentDescription = stringResource(id = R.string.player_skip_next_cd),
                     modifier = Modifier.size(36.dp)
                 )
+            }
+        }
+    }
+}
+
+private val SLEEP_TIMER_OPTIONS_MINUTES = listOf(1, 5, 15, 30, 60)
+
+@Composable
+private fun SleepTimerButton(
+    remainingMs: Long?,
+    onSetTimer: (Long) -> Unit,
+    onCancelTimer: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val isActive = remainingMs != null
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (remainingMs != null) {
+            Text(
+                text = formatDuration(remainingMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Box {
+            IconButton(onClick = { menuExpanded = true }) {
+                Icon(
+                    imageVector = Icons.Filled.Bedtime,
+                    contentDescription = stringResource(id = R.string.player_sleep_timer_cd),
+                    tint = if (isActive) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                )
+            }
+
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                SLEEP_TIMER_OPTIONS_MINUTES.forEach { minutes ->
+                    DropdownMenuItem(
+                        text = { Text(text = stringResource(id = R.string.player_sleep_timer_minutes, minutes)) },
+                        onClick = {
+                            onSetTimer(minutes * 60_000L)
+                            menuExpanded = false
+                        }
+                    )
+                }
+
+                if (isActive) {
+                    DropdownMenuItem(
+                        text = { Text(text = stringResource(id = R.string.player_sleep_timer_off)) },
+                        onClick = {
+                            onCancelTimer()
+                            menuExpanded = false
+                        }
+                    )
+                }
             }
         }
     }

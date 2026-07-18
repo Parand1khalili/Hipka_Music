@@ -10,6 +10,7 @@ interface PlayerRepository {
     val currentSong: StateFlow<Song?>
     val progress: StateFlow<PlaybackProgress>
     val playbackErrors: SharedFlow<String>
+    val sleepTimerRemainingMs: StateFlow<Long?>
 
     suspend fun playSong(song: Song)
     suspend fun playQueue(songs: List<Song>, startIndex: Int)
@@ -18,4 +19,6 @@ interface PlayerRepository {
     suspend fun skipToNext()
     suspend fun skipToPrevious()
     suspend fun seekTo(positionMs: Long)
+    fun startSleepTimer(durationMs: Long)
+    fun cancelSleepTimer()
 }

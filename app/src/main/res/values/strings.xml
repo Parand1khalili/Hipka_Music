@@ -33,6 +33,9 @@
     <string name="player_skip_previous_cd">Previous</string>
     <string name="player_back_cd">Back</string>
     <string name="player_nothing_playing">Nothing is playing</string>
+    <string name="player_sleep_timer_cd">Sleep timer</string>
+    <string name="player_sleep_timer_minutes">%d min</string>
+    <string name="player_sleep_timer_off">Turn off</string>
 
     <!-- Search screen -->
     <string name="search_hint">Search songs or artists...</string>

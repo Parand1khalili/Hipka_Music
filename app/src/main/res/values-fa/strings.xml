@@ -29,6 +29,9 @@
     <string name="player_skip_previous_cd">قبلی</string>
     <string name="player_back_cd">بازگشت</string>
     <string name="player_nothing_playing">چیزی در حال پخش نیست</string>
+    <string name="player_sleep_timer_cd">تایمر خواب</string>
+    <string name="player_sleep_timer_minutes">%d دقیقه</string>
+    <string name="player_sleep_timer_off">خاموش کردن</string>
 
     <!-- Search screen -->
     <string name="search_hint">جستجوی آهنگ یا خواننده...</string>

@@ -35,6 +35,7 @@ import kotlin.coroutines.resume
 // طول محو صدا در ابتدا/انتهای هر آهنگ (میلی‌ثانیه)
 private const val CROSSFADE_DURATION_MS = 3000L
 private const val CROSSFADE_TICK_MS = 200L
+private const val SLEEP_TIMER_TICK_MS = 1000L
 
 @Singleton
 class PlayerRepositoryImpl @Inject constructor(
@@ -60,6 +61,11 @@ class PlayerRepositoryImpl @Inject constructor(
 
     private val _playbackErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
     override val playbackErrors: SharedFlow<String> = _playbackErrors
+
+    private val _sleepTimerRemainingMs = MutableStateFlow<Long?>(null)
+    override val sleepTimerRemainingMs: StateFlow<Long?> = _sleepTimerRemainingMs.asStateFlow()
+
+    private var sleepTimerJob: Job? = null
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -179,6 +185,27 @@ class PlayerRepositoryImpl @Inject constructor(
         val controller = controller()
         controller.seekTo(positionMs)
         updateProgress(controller)
+    }
+
+    override fun startSleepTimer(durationMs: Long) {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = repositoryScope.launch {
+            var remaining = durationMs
+            _sleepTimerRemainingMs.value = remaining
+            while (remaining > 0) {
+                delay(SLEEP_TIMER_TICK_MS)
+                remaining = (remaining - SLEEP_TIMER_TICK_MS).coerceAtLeast(0)
+                _sleepTimerRemainingMs.value = remaining
+            }
+            pause()
+            _sleepTimerRemainingMs.value = null
+        }
+    }
+
+    override fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _sleepTimerRemainingMs.value = null
     }
 }
 

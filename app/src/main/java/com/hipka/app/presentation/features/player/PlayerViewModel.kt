@@ -39,6 +39,11 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { it.copy(progress = progress) }
             }
         }
+        viewModelScope.launch {
+            playerRepository.sleepTimerRemainingMs.collect { remaining ->
+                _uiState.update { it.copy(sleepTimerRemainingMs = remaining) }
+            }
+        }
     }
 
     fun onIntent(intent: PlayerIntent) {
@@ -57,6 +62,8 @@ class PlayerViewModel @Inject constructor(
                     // TODO: در صورت نیاز در اسپرینت‌های بعدی کل لیست shuffledList به صف پخش (Queue) ریپازیتوری پاس داده شود.
                 }
             }
+            is PlayerIntent.SetSleepTimer -> playerRepository.startSleepTimer(intent.durationMs)
+            PlayerIntent.CancelSleepTimer -> playerRepository.cancelSleepTimer()
         }
     }
 
