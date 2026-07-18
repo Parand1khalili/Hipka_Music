@@ -47,6 +47,7 @@ import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
 import androidx.compose.material3.MaterialTheme
+import com.hipka.app.presentation.features.see_all.SeeAllScreen
 
 @Composable
 fun HipkaNavGraph(
@@ -136,14 +137,25 @@ fun HipkaNavGraph(
                 )
             }
 
+            //  بخش جدید و کامل شده برای اتصال بدون ارور به سیستم لایک و پخش موزیک پلیر Hipka
             composable(
                 route = "see_all/{section}",
                 arguments = listOf(navArgument("section") { type = NavType.StringType })
             ) { backStackEntry ->
                 val section = backStackEntry.arguments?.getString("section") ?: ""
+
                 SeeAllScreen(
                     sectionName = section,
-                    onBackClick = { navController.popBackStack() }
+                    likedSongIds = likedSongIds, //  اتصال مستقیم به ست لایک‌های زنده پروژه
+                    onBackClick = { navController.popBackStack() },
+                    onSongClick = { song ->
+                        // ⚡ اضافه کردن به لیست شنیده‌شده‌های اخیر و پخش مستقیم در مینی‌پلیر
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onLikeClick = { song ->
+                        songInteractionViewModel.toggleLike(song)
+                    }
                 )
             }
 
@@ -156,6 +168,10 @@ fun HipkaNavGraph(
                     },
                     onLikeClick = { song ->
                         songInteractionViewModel.toggleLike(song)
+                    },
+                    // ✨ اتصال هاب سرچ به صفحه کشف عمومی کاربران (پیدا کردن دوستان)
+                    onNavigateToDiscoverUsers = {
+                        navController.navigate("followed_users/discover")
                     }
                 )
             }
@@ -174,7 +190,10 @@ fun HipkaNavGraph(
                 ProfileScreen(
                     mainUiState = mainUiState,
                     onMainIntent = onMainIntent,
-                    onNavigateToFollowedUsers = { navController.navigate(Screen.FollowedUsers.route) }
+                    // ✨ اصلاح ناوبری پروفایل: ارسال هوشمند نوع کلیک (فالوور یا فالووینگ) به لایه بعد
+                    onNavigateToFollowedUsers = { type ->
+                        navController.navigate("followed_users/$type")
+                    }
                 )
             }
 
@@ -188,12 +207,19 @@ fun HipkaNavGraph(
             }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }
 
-            composable(Screen.FollowedUsers.route) {
+            // تبدیل به مسیر داینامیک پارامتریک جهت تفکیک کامل لایه نمایش فالوور، فالووینگ و دیسکاور
+            composable(
+                route = "followed_users/{type}",
+                arguments = listOf(navArgument("type") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val type = backStackEntry.arguments?.getString("type") ?: "following"
+
                 FollowedUsersScreen(
+                    viewType = type,
                     onOpenChat = { peerId ->
                         navController.navigate(Screen.ChatConversation.createRoute(peerId))
                     },
-                    onBackClick = { navController.popBackStack() } // ✨ حل ارور اول: پاس دادن دکمه بازگشت برای لیست یوزرها
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 
@@ -202,6 +228,10 @@ fun HipkaNavGraph(
                     onSongClick = { song ->
                         songInteractionViewModel.addToRecentlyPlayed(song)
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onShuffleAllClick = { songList ->
+                        // اجرای شافل تصادفی روی کل لیست لایک شده‌ها
+                        playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
                     },
                     onNavigateBack = { navController.popBackStack() }
                 )
@@ -213,10 +243,13 @@ fun HipkaNavGraph(
                         songInteractionViewModel.addToRecentlyPlayed(song)
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
                     },
+                    onShuffleAllClick = { songList ->
+                        // اجرای شافل تصادفی روی کل لیست آهنگ‌های اخیر شنیده شده
+                        playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
+                    },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
-
             composable(Screen.ChatList.route) { PlaceholderScreen("Chats") }
 
             composable(
@@ -224,7 +257,7 @@ fun HipkaNavGraph(
                 arguments = listOf(navArgument(Screen.ChatConversation.ARG_PEER_USER_ID) { type = NavType.StringType })
             ) {
                 ChatScreen(
-                    onBackClick = { navController.popBackStack() } // ✨ حل ارور دوم: پاس دادن دکمه بازگشت برای داخل صفحه چت
+                    onBackClick = { navController.popBackStack() }
                 )
             }
         }

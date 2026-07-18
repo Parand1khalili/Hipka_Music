@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.People // ویژگی کیانا: ایمپورت آیکون مردم برای دکمه پیدا کردن دوستان
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,13 +31,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton // ویژگی کیانا: ایمپورت دکمه اوت‌لایند
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +48,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.hipka.app.R
-import com.hipka.app.data.local.entity.SearchHistoryEntity
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
 
@@ -58,6 +57,7 @@ fun SearchScreen(
     likedSongIds: Set<String>,
     onSongClick: (Song) -> Unit,
     onLikeClick: (Song) -> Unit,
+    onNavigateToDiscoverUsers: () -> Unit, // ویژگی کیانا: پارامتر جدید ناوبری برای اتصال به هاب اکتشاف کاربران
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,6 +68,7 @@ fun SearchScreen(
             .fillMaxSize()
             .padding(HipkaTheme.dimens.spaceM)
     ) {
+        // فیلد سرچ اصلی
         OutlinedTextField(
             value = uiState.searchQuery,
             onValueChange = { viewModel.onIntent(SearchIntent.QueryChanged(it)) },
@@ -94,6 +95,7 @@ fun SearchScreen(
 
         Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
 
+        // ردیف فیلتر چیپ‌ها
         Row(
             horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS),
             modifier = Modifier.fillMaxWidth()
@@ -115,6 +117,24 @@ fun SearchScreen(
             )
         }
 
+        // ویژگی کیانا: دکمه شیک پیدا کردن دوستان فقط زمانی که باکس سرچ خالی است نمایش داده می‌شود
+        if (uiState.searchQuery.isEmpty()) {
+            Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+            OutlinedButton(
+                onClick = onNavigateToDiscoverUsers,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.People,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
+                Text(text = stringResource(id = R.string.search_find_friends))
+            }
+        }
+
         Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
 
         when {
@@ -131,14 +151,15 @@ fun SearchScreen(
                     modifier = Modifier.padding(vertical = HipkaTheme.dimens.spaceS)
                 )
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(uiState.searchHistory, key = { it.query }) { historyItem ->
+                    // اصلاح کلید و مپ کردن صحیح استرینگ تاریخچه
+                    items(uiState.searchHistory, key = { it }) { historyQuery ->
                         SearchHistoryItem(
-                            item = historyItem,
+                            query = historyQuery,
                             onClick = {
-                                viewModel.onIntent(SearchIntent.SearchSong(historyItem.query))
+                                viewModel.onIntent(SearchIntent.SearchSong(historyQuery))
                                 keyboardController?.hide()
                             },
-                            onDelete = { viewModel.onIntent(SearchIntent.DeleteHistoryItem(historyItem.query)) }
+                            onDelete = { viewModel.onIntent(SearchIntent.DeleteHistoryItem(historyQuery)) }
                         )
                     }
                 }
@@ -169,7 +190,6 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
                 ) {
-                    // ترکیب وضعیت لایک از دیتابیس با نتایج سرچ
                     val resultsWithLikeStatus = uiState.searchResults.map { song ->
                         song.copy(isLiked = likedSongIds.contains(song.id))
                     }
@@ -189,7 +209,7 @@ fun SearchScreen(
 
 @Composable
 private fun SearchHistoryItem(
-    item: SearchHistoryEntity,
+    query: String, // اصلاح نام و دیتا تایپ به String ساده بدون ارور .query
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -206,7 +226,7 @@ private fun SearchHistoryItem(
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = item.query,
+            text = query, // استفاده مستقیم از رشته
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier
                 .weight(1f)
@@ -264,7 +284,6 @@ private fun SearchResultItem(
             )
         }
 
-        // دکمه لایک تعاملی
         IconButton(
             onClick = onLikeClick,
             modifier = Modifier.size(24.dp)

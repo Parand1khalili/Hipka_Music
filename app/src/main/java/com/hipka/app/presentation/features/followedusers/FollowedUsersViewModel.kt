@@ -3,9 +3,10 @@ package com.hipka.app.presentation.features.followedusers
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hipka.app.data.local.datastore.SessionManager
-import com.hipka.app.domain.repository.FollowRepository
 import com.hipka.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,8 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FollowedUsersViewModel @Inject constructor(
-    private val userRepository: UserRepository,
-    private val followRepository: FollowRepository,
+    private val userRepository: UserRepository, // 💡 وابستگی قدیمی followRepository کاملاً حذف شد
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -45,12 +45,24 @@ class FollowedUsersViewModel @Inject constructor(
                 }
                 return@launch
             }
+
             runCatching {
-                val allUsers = userRepository.getAllUsers().filterNot { it.id == myId }
-                val followingIds = followRepository.getFollowingIds(myId)
-                allUsers to followingIds
-            }.onSuccess { (users, followingIds) ->
-                _uiState.update { it.copy(users = users, followingIds = followingIds, isLoading = false) }
+                coroutineScope {
+                    val usersDeferred = async { userRepository.getAllUsers().filterNot { it.id == myId } }
+                    val followingDeferred = async { userRepository.getFollowingIds(myId) }
+                    val followersDeferred = async { userRepository.getFollowerIds(myId) }
+
+                    Triple(usersDeferred.await(), followingDeferred.await(), followersDeferred.await())
+                }
+            }.onSuccess { (users, followingIds, followerIds) ->
+                _uiState.update {
+                    it.copy(
+                        users = users,
+                        followingIds = followingIds.toSet(),
+                        followerIds = followerIds.toSet(),
+                        isLoading = false
+                    )
+                }
             }.onFailure { e ->
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
@@ -62,16 +74,20 @@ class FollowedUsersViewModel @Inject constructor(
             val myId = sessionManager.currentUserId.first() ?: return@launch
             val wasFollowing = targetUserId in _uiState.value.followingIds
 
-            // Optimistic update so the UI feels instant.
+            // Optimistic update
             _uiState.update { state ->
                 val updated = state.followingIds.toMutableSet()
                 if (wasFollowing) updated.remove(targetUserId) else updated.add(targetUserId)
                 state.copy(followingIds = updated)
             }
 
+            // ✨ اتصال عملیات فالو و آنفالو به آدرس و جدول واقعی سوپابیس
             runCatching {
-                if (wasFollowing) followRepository.unfollow(myId, targetUserId)
-                else followRepository.follow(myId, targetUserId)
+                if (wasFollowing) {
+                    userRepository.unfollowUser(myId, targetUserId)
+                } else {
+                    userRepository.followUser(myId, targetUserId)
+                }
             }.onFailure { e ->
                 // Revert on failure.
                 _uiState.update { state ->

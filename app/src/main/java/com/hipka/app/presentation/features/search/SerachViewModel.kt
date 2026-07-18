@@ -2,8 +2,6 @@ package com.hipka.app.presentation.features.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hipka.app.data.local.dao.SearchHistoryDao
-import com.hipka.app.data.local.entity.SearchHistoryEntity
 import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.SongRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,8 +22,7 @@ import javax.inject.Inject
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val songRepository: SongRepository,
-    private val searchHistoryDao: SearchHistoryDao
+    private val songRepository: SongRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -35,7 +32,7 @@ class SearchViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            searchHistoryDao.getSearchHistory().collect { history ->
+            songRepository.getSearchHistory().collect { history ->
                 _uiState.update { it.copy(searchHistory = history) }
             }
         }
@@ -54,7 +51,6 @@ class SearchViewModel @Inject constructor(
                     }
                 }
                 .collect { rawResults ->
-                    // Save raw results and apply the current filter immediately
                     _uiState.update { state ->
                         state.copy(
                             rawSearchResults = rawResults,
@@ -92,9 +88,8 @@ class SearchViewModel @Inject constructor(
         searchQueryFlow.value = query
 
         viewModelScope.launch {
-            searchHistoryDao.insertSearchQuery(
-                SearchHistoryEntity(query = query, timestamp = System.currentTimeMillis())
-            )
+            // 👈 استفاده از متد ریپازیتوری برای ذخیره امن تاریخچه
+            songRepository.saveSearchQuery(query)
         }
     }
 
@@ -113,7 +108,6 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun handleChangeFilter(filter: SearchFilter) {
-        // Apply filter locally without making a new network request
         _uiState.update { state ->
             state.copy(
                 selectedFilter = filter,
@@ -134,7 +128,7 @@ class SearchViewModel @Inject constructor(
 
     private fun deleteHistoryItem(query: String) {
         viewModelScope.launch {
-            searchHistoryDao.deleteSearchQuery(query)
+            songRepository.deleteSearchQuery(query)
         }
     }
 }

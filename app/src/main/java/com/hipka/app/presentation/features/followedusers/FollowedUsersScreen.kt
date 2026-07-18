@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -39,22 +41,41 @@ import com.hipka.app.presentation.theme.HipkaTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowedUsersScreen(
+    viewType: String, // "followers" یا "following" یا "discover"
     onOpenChat: (String) -> Unit,
     onBackClick: () -> Unit,
     viewModel: FollowedUsersViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // ۱. مدیریت کاملاً داینامیک عنوان بالای صفحه برای هر ۳ وضعیت
+    val screenTitle = when (viewType) {
+        "followers" -> stringResource(id = R.string.followers)
+        "following" -> stringResource(id = R.string.following)
+        "discover" -> stringResource(id = R.string.search_find_friends)
+        else -> stringResource(id = R.string.following)
+    }
+
+    // ۲. فیلتراسیون هوشمند و پویای دیتابیس
+    val displayedUsers = remember(uiState.users, uiState.followingIds, uiState.followerIds, viewType) {
+        when (viewType) {
+            "following" -> {
+                uiState.users.filter { it.id in uiState.followingIds }
+            }
+            "followers" -> {
+                uiState.users.filter { it.id in uiState.followerIds }
+            }
+            "discover" -> {
+                uiState.users
+            }
+            else -> uiState.users
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                // ✨ اصلاح باگ UX: متصل شدن عنوان به سیستم چندزبانگی (Discover People / کشف کاربران)
-                title = {
-                    Text(
-                        text = stringResource(id = R.string.nav_discover_users),
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text(text = screenTitle, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -81,12 +102,29 @@ fun FollowedUsersScreen(
                 ) {
                     Text(uiState.errorMessage.orEmpty())
                 }
+                displayedUsers.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // ✨ اصلاح باگ چندزبانه: جایگزینی متن هاردکد شده با ساختار پویا از فایل strings.xml پروژه
+                    val emptyStateText = when (viewType) {
+                        "followers" -> stringResource(id = R.string.no_followers_found)
+                        "following" -> stringResource(id = R.string.no_following_found)
+                        else -> stringResource(id = R.string.no_users_found)
+                    }
+
+                    Text(
+                        text = emptyStateText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(HipkaTheme.dimens.spaceM),
                     verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
                 ) {
-                    items(uiState.users, key = { it.id }) { user ->
+                    items(displayedUsers, key = { it.id }) { user ->
                         val isFollowing = user.id in uiState.followingIds
                         ListItem(
                             headlineContent = { Text(user.name) },

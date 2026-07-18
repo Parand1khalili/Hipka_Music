@@ -16,4 +16,5 @@ sealed interface PlayerIntent {
     data object SkipNext : PlayerIntent
     data object SkipPrevious : PlayerIntent
     data class SeekTo(val positionMs: Long) : PlayerIntent
+    data class ShufflePlayList(val songs: List<Song>) : PlayerIntent
 }

@@ -49,6 +49,14 @@ class PlayerViewModel @Inject constructor(
             PlayerIntent.SkipNext -> skipToNext()
             PlayerIntent.SkipPrevious -> skipToPrevious()
             is PlayerIntent.SeekTo -> seekTo(intent.positionMs)
+            is PlayerIntent.ShufflePlayList -> {
+                if (intent.songs.isNotEmpty()) {
+                    val shuffledList = intent.songs.shuffled()
+                    // پخش اولین آهنگ از لیست مخلوط شده
+                    playSong(shuffledList.first())
+                    // TODO: در صورت نیاز در اسپرینت‌های بعدی کل لیست shuffledList به صف پخش (Queue) ریپازیتوری پاس داده شود.
+                }
+            }
         }
     }
 

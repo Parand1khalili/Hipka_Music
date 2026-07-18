@@ -126,4 +126,5 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.2")
     implementation("io.ktor:ktor-client-okhttp:2.3.12")
     implementation("io.ktor:ktor-client-cio:2.3.12")
+
 }

@@ -4,9 +4,13 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 // 1. History search
-@Entity(tableName = "search_history")
+@Entity(
+    tableName = "search_history",
+    primaryKeys = ["userId", "query"] // کلید ترکیبی برای جلوگیری از تداخل سرچ یوزرها
+)
 data class SearchHistoryEntity(
-    @PrimaryKey val query: String,
+    val userId: String,
+    val query: String,
     val timestamp: Long
 )
 
@@ -21,6 +25,7 @@ data class LocalSongEntity(
     val playCount: Int,
     val releaseDate: String,
     val isLiked: Boolean,
+    val likesCount: Long,
     val isDownloaded: Boolean,
     val localFilePath: String? // Downloaded file address on the phone
 )
@@ -38,8 +43,22 @@ data class OfflineMessageEntity(
 )
 
 // 4. recent songs
-@Entity(tableName = "recent_songs")
+@Entity(
+    tableName = "recent_songs",
+    primaryKeys = ["userId", "songId"] // کلید ترکیبی برای جلوگیری از تداخل تاریخچه پخش
+)
 data class RecentSongEntity(
-    @PrimaryKey val songId: String,
+    val userId: String,
+    val songId: String,
     val timestamp: Long
+)
+
+// 5. User Likes
+@Entity(
+    tableName = "local_user_likes",
+    primaryKeys = ["userId", "songId"]
+)
+data class LocalUserLikeEntity(
+    val userId: String,
+    val songId: String
 )

@@ -1,5 +1,6 @@
 package com.hipka.app.domain.repository
 
+import com.hipka.app.domain.model.PlaybackProgress
 import com.hipka.app.domain.model.Song
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -7,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface PlayerRepository {
     val isPlaying: StateFlow<Boolean>
     val currentSong: StateFlow<Song?>
+    val progress: StateFlow<PlaybackProgress>
     val playbackErrors: SharedFlow<String>
 
     suspend fun playSong(song: Song)
@@ -15,4 +17,5 @@ interface PlayerRepository {
     suspend fun resume()
     suspend fun skipToNext()
     suspend fun skipToPrevious()
+    suspend fun seekTo(positionMs: Long)
 }
