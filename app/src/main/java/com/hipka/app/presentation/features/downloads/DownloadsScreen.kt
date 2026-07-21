@@ -24,6 +24,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -130,36 +131,49 @@ private fun SwipeToDeleteSongItem(
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
+            // پس‌زمینه کمی تودررفته و پررنگ‌تر است تا هنگام کشیدن، از خود کارت جدا دیده شود
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(vertical = HipkaTheme.dimens.spaceXXS)
                     .background(
-                        color = MaterialTheme.colorScheme.errorContainer,
+                        color = MaterialTheme.colorScheme.error,
                         shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
                     )
                     .padding(horizontal = HipkaTheme.dimens.spaceL),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = stringResource(id = R.string.downloads_delete_cd),
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = stringResource(id = R.string.downloads_delete_cd),
+                        tint = MaterialTheme.colorScheme.onError
+                    )
+                    Text(
+                        text = stringResource(id = R.string.downloads_delete_cd),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onError
+                    )
+                }
             }
         }
     ) {
-        DownloadedSongItem(song = song, onClick = onClick)
+        DownloadedSongItem(song = song, onClick = onClick, onDelete = onDelete)
     }
 }
 
 @Composable
-private fun DownloadedSongItem(song: Song, onClick: () -> Unit) {
+private fun DownloadedSongItem(song: Song, onClick: () -> Unit, onDelete: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(HipkaTheme.dimens.cornerM),
+        // کارت باید کاملاً مات باشد تا هنگام کشیدن، پس‌زمینه قرمز حذف از پشت آن دیده نشود
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
         )
     ) {
         Row(
@@ -187,9 +201,18 @@ private fun DownloadedSongItem(song: Song, onClick: () -> Unit) {
 
             Icon(
                 imageVector = Icons.Filled.DownloadDone,
-                contentDescription = null,
+                contentDescription = stringResource(id = R.string.downloaded_cd),
                 tint = MaterialTheme.colorScheme.primary
             )
+
+            // علاوه بر Swipe to Dismiss، یک دکمه حذف همیشه‌دیده‌شده هم داریم
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(id = R.string.downloads_delete_cd),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }

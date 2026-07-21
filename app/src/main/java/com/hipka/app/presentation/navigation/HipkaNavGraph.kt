@@ -70,6 +70,23 @@ fun HipkaNavGraph(
         }
     }
     val likedSongIds by songInteractionViewModel.likedSongIds.collectAsStateWithLifecycle()
+    val downloadedSongIds by songInteractionViewModel.downloadedSongIds.collectAsStateWithLifecycle()
+
+    // کاربر عادی روی دکمه دانلود زده — طبق مستندات باید پیام نیاز به ارتقاء حساب ببیند
+    val premiumRequiredMessage = stringResource(id = R.string.download_premium_required)
+    LaunchedEffect(songInteractionViewModel) {
+        songInteractionViewModel.premiumRequired.collect {
+            snackbarHostState.showSnackbar(premiumRequiredMessage)
+        }
+    }
+
+    // بازخورد فوری هنگام شروع دانلود (نوتیفیکیشن پیشرفت هم توسط ورکر نمایش داده می‌شود)
+    val downloadStartedMessage = stringResource(id = R.string.download_started)
+    LaunchedEffect(songInteractionViewModel) {
+        songInteractionViewModel.downloadStarted.collect {
+            snackbarHostState.showSnackbar(downloadStartedMessage)
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -217,7 +234,11 @@ fun HipkaNavGraph(
                 PlayerScreen(
                     uiState = playerUiState,
                     onIntent = { playerViewModel.onIntent(it) },
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    isDownloaded = playerUiState.currentSong?.id in downloadedSongIds,
+                    onDownloadClick = {
+                        playerUiState.currentSong?.let { songInteractionViewModel.downloadSong(it) }
+                    }
                 )
             }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }

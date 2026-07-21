@@ -98,4 +98,12 @@
     <string name="downloads_sort_by_artist">Artist</string>
     <string name="downloads_delete_cd">Delete download</string>
     <string name="downloads_count">%1$d downloaded</string>
+    <string name="download_cd">Download for offline</string>
+    <string name="downloaded_cd">Downloaded</string>
+    <string name="download_premium_required">Offline download is a Premium feature. Upgrade your account to download songs.</string>
+    <string name="download_started">Download started…</string>
+    <string name="download_notification_channel">Downloads</string>
+    <string name="download_notification_title">Downloading</string>
+    <string name="download_complete">Download complete</string>
+    <string name="download_failed">Download failed</string>
 </resources>

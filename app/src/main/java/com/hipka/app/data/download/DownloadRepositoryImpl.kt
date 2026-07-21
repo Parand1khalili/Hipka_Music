@@ -36,7 +36,8 @@ class DownloadRepositoryImpl @Inject constructor(
             .setInputData(
                 workDataOf(
                     DownloadWorker.KEY_SONG_ID to song.id,
-                    DownloadWorker.KEY_AUDIO_URL to song.audioUrl
+                    DownloadWorker.KEY_AUDIO_URL to song.audioUrl,
+                    DownloadWorker.KEY_SONG_TITLE to song.title
                 )
             )
             // بدون اینترنت اصلاً شروع نمی‌شود و به محض وصل شدن خودکار اجرا می‌شود
