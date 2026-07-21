@@ -3,6 +3,7 @@ package com.hipka.app.presentation.features.home
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -35,9 +36,9 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +55,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -106,7 +109,7 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.background),
                 contentPadding = PaddingValues(bottom = HipkaTheme.dimens.spaceXL)
             ) {
-                // 1. Top App Bar
+                // 1. Top App Bar همراه با لوگوی سفارشی
                 item { HomeTopBar() }
 
                 item { Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS)) }
@@ -252,6 +255,10 @@ fun HomeScreen(
 
 @Composable
 private fun HomeTopBar() {
+    // بررسی زبان برنامه برای نمایش لوگوی مناسب (فارسی یا انگلیسی)
+    val isPersian = LocalConfiguration.current.locales[0].language == "fa"
+    val logoResId = if (isPersian) R.drawable.ic_logo_fa else R.drawable.ic_logo_en
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -259,13 +266,16 @@ private fun HomeTopBar() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column {
-            Text(
-                text = stringResource(id = R.string.app_name),
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
+        // جایگزینی متن اسم برنامه با لوگوی تصویری
+        Image(
+            painter = painterResource(id = logoResId),
+            contentDescription = stringResource(id = R.string.app_name),
+            modifier = Modifier
+                .height(38.dp) // ارتفاع استاندارد برای جا گرفتن در تاپ‌بار
+                .width(120.dp), // عرض مناسب
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.CenterStart
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             TopBarIconButton(icon = Icons.Default.Notifications, contentDescription = "Notifications")
@@ -309,8 +319,6 @@ private fun TopBarIconButton(icon: ImageVector, contentDescription: String) {
 
 @Composable
 private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    // نسبت طول به عرض ثابت (به‌جای ارتفاع ثابت به dp) باعث می‌شود بنر
-    // روی هر گوشی‌ای با هر عرض صفحه‌ای، تناسب یکسان و بلندتری داشته باشد.
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -323,7 +331,6 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
             .clip(RoundedCornerShape(HipkaTheme.dimens.cornerL))
             .clickable(onClick = onClick)
     ) {
-        // تصویر پس‌زمینه، تمام کارت را پر می‌کند
         AsyncImage(
             model = song.coverImageUrl,
             contentDescription = null,
@@ -331,7 +338,6 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
             modifier = Modifier.fillMaxSize()
         )
 
-        // لایه‌ی گرادینت تیره روی تصویر تا متن‌ها همیشه خوانا بمانند
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -346,7 +352,6 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
                     )
                 )
         )
-        // کمی گرادینت افقی هم از سمت راست برای عمق بیشتر
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -360,7 +365,6 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
                 )
         )
 
-        // برچسب «امروز ویژه» بالای بنر
         Surface(
             shape = RoundedCornerShape(50),
             color = Color.White.copy(alpha = 0.20f),
@@ -376,7 +380,6 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
             )
         }
 
-        // عنوان، خواننده و دکمه پخش، پایین بنر
         Row(
             modifier = Modifier
                 .align(Alignment.BottomStart)
