@@ -1,11 +1,13 @@
 package com.hipka.app.di
 
+import com.hipka.app.data.download.DownloadRepositoryImpl
 import com.hipka.app.data.player.PlayerRepositoryImpl
 import com.hipka.app.data.repository.ChatRepositoryImpl
 import com.hipka.app.data.repository.FollowRepositoryImpl
 import com.hipka.app.data.repository.PlaylistRepositoryImpl
 import com.hipka.app.data.repository.UserRepositoryImpl
 import com.hipka.app.domain.repository.ChatRepository
+import com.hipka.app.domain.repository.DownloadRepository
 import com.hipka.app.domain.repository.FollowRepository
 import com.hipka.app.domain.repository.PlayerRepository
 import com.hipka.app.domain.repository.PlaylistRepository
@@ -38,4 +40,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDownloadRepository(impl: DownloadRepositoryImpl): DownloadRepository
 }

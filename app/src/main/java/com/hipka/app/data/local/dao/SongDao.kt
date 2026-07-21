@@ -22,6 +22,12 @@ interface SongDao {
     @Query("UPDATE songs SET isLiked = :isLiked WHERE id = :songId")
     suspend fun updateLikeStatus(songId: String, isLiked: Boolean)
 
+    @Query("UPDATE songs SET isDownloaded = :isDownloaded, localFilePath = :localFilePath WHERE id = :songId")
+    suspend fun updateDownloadStatus(songId: String, isDownloaded: Boolean, localFilePath: String?)
+
+    @Query("SELECT id FROM songs WHERE isDownloaded = 1")
+    fun getDownloadedSongIds(): Flow<List<String>>
+
     // متدهای قدیمی لایک (جهت سازگاری با بخش‌هایی که هنوز آپدیت نشده‌اند)
     @Query("SELECT * FROM songs WHERE isLiked = 1")
     fun getLikedSongs(): Flow<List<LocalSongEntity>>
