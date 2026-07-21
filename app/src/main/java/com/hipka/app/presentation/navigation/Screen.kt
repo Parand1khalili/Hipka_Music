@@ -29,4 +29,5 @@ sealed class Screen(val route: String) {
     object SeeAll : Screen("see_all/{section}") {
         fun createRoute(section: String) = "see_all/$section"
     }
+    data object TopArtists : Screen("top_artists")
 }

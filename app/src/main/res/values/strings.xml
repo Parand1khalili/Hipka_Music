@@ -79,4 +79,5 @@
     <string name="no_followers_found">No followers found</string>
     <string name="no_following_found">No following found</string>
     <string name="no_users_found">No users found</string>
+    <string name="play_count_suffix">plays</string>
 </resources>

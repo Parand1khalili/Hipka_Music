@@ -1,5 +1,6 @@
 package com.hipka.app.domain.repository
 
+import com.hipka.app.domain.model.Artist
 import com.hipka.app.domain.model.Song
 import kotlinx.coroutines.flow.Flow
 
@@ -17,4 +18,6 @@ interface SongRepository {
     suspend fun saveSearchQuery(query: String)
     suspend fun deleteSearchQuery(query: String)
     suspend fun clearAllSearchHistory()
+
+    fun getTopArtists(): Flow<List<Artist>>
 }

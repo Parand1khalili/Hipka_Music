@@ -1,5 +1,6 @@
 package com.hipka.app.data.remote.api
 
+import com.hipka.app.data.remote.dto.ArtistDto
 import com.hipka.app.data.remote.dto.SongDto
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -33,4 +34,8 @@ interface SongApi {
     suspend fun toggleSongLikeRemote(
         @Body request: ToggleLikeRequest
     ): retrofit2.Response<Unit> // استفاده از Response برای گرفتن ارورهای احتمالی
+
+    @GET("rest/v1/top_artists?select=*")
+    suspend fun getTopArtists(): List<ArtistDto>
+
 }

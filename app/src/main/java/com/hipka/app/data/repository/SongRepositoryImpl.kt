@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import com.hipka.app.data.local.entity.LocalUserLikeEntity
 import com.hipka.app.data.remote.api.ToggleLikeRequest
+import com.hipka.app.domain.model.Artist
+
 
 class SongRepositoryImpl @Inject constructor(
     private val songApi: SongApi,
@@ -256,5 +258,22 @@ class SongRepositoryImpl @Inject constructor(
             isDownloaded = isDownloaded,
             localFilePath = localFilePath
         )
+    }
+
+    override fun getTopArtists(): Flow<List<Artist>> = kotlinx.coroutines.flow.flow {
+        try {
+            val remoteArtists = songApi.getTopArtists()
+            val artists = remoteArtists.map { dto ->
+                Artist(
+                    name = dto.artistName,
+                    totalPlayCount = dto.totalPlayCount,
+                    imageUrl = dto.artistImageUrl ?: ""
+                )
+            }
+            emit(artists)
+        } catch (e: Exception) {
+            android.util.Log.e("REPO_ERROR", "Failed to fetch top artists: ${e.message}")
+            emit(emptyList())
+        }
     }
 }

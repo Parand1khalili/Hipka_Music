@@ -75,4 +75,5 @@
     <string name="no_followers_found">دنبال‌کننده‌ای یافت نشد</string>
     <string name="no_following_found">در حال حاضر کسی را دنبال نمی‌کنید</string>
     <string name="no_users_found">کاربری یافت نشد</string>
+    <string name="play_count_suffix">پخش</string>
 </resources>

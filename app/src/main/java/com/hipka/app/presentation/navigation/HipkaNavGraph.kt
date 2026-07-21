@@ -47,6 +47,8 @@ import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
 import androidx.compose.material3.MaterialTheme
 import com.hipka.app.presentation.features.see_all.SeeAllScreen
+import com.hipka.app.domain.model.Artist
+
 
 @Composable
 fun HipkaNavGraph(
@@ -114,8 +116,7 @@ fun HipkaNavGraph(
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                            "artists" -> android.widget.Toast.makeText(context, "Opening Top Artists...", android.widget.Toast.LENGTH_SHORT).show()
-                        }
+                            "artists" -> navController.navigate(Screen.TopArtists.route)                        }
                     },
                     onSeeAllClick = { section ->
                         navController.navigate("see_all/$section")
@@ -127,6 +128,12 @@ fun HipkaNavGraph(
                             restoreState = true
                         }
                     }
+                )
+
+            }
+            composable(Screen.TopArtists.route) {
+                com.hipka.app.presentation.features.topartists.TopArtistsScreen(
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 
