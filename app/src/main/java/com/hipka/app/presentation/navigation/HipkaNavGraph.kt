@@ -40,6 +40,7 @@ import com.hipka.app.presentation.features.playlists.PlaylistsScreen
 import com.hipka.app.presentation.features.profile.ProfileScreen
 import com.hipka.app.presentation.features.followedusers.FollowedUsersScreen
 import com.hipka.app.presentation.features.chat.ChatScreen
+import com.hipka.app.presentation.features.downloads.DownloadsScreen
 import com.hipka.app.presentation.features.likedsongs.LikedSongsScreen
 import com.hipka.app.presentation.features.recent.RecentSongsScreen
 import com.hipka.app.presentation.main.SongInteractionViewModel
@@ -183,7 +184,14 @@ fun HipkaNavGraph(
                 )
             }
 
-            composable(Screen.Downloads.route) { PlaceholderScreen("Downloads") }
+            composable(Screen.Downloads.route) {
+                DownloadsScreen(
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    }
+                )
+            }
 
             composable(Screen.Playlists.route) {
                 PlaylistsScreen(

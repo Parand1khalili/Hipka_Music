@@ -85,4 +85,13 @@
     <string name="no_following_found">در حال حاضر کسی را دنبال نمی‌کنید</string>
     <string name="no_users_found">کاربری یافت نشد</string>
     <string name="play_count_suffix">پخش</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">دانلودها</string>
+    <string name="no_downloads">آهنگ دانلود شده‌ای ندارید</string>
+    <string name="no_downloads_desc">آهنگ‌هایی که دانلود می‌کنید اینجا نمایش داده می‌شوند و بدون اینترنت پخش می‌شوند.</string>
+    <string name="downloads_sort_by_title">عنوان</string>
+    <string name="downloads_sort_by_artist">خواننده</string>
+    <string name="downloads_delete_cd">حذف دانلود</string>
+    <string name="downloads_count">%1$d آهنگ دانلود شده</string>
 </resources>
