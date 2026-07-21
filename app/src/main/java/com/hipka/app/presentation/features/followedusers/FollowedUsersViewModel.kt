@@ -17,7 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FollowedUsersViewModel @Inject constructor(
-    private val userRepository: UserRepository, // 💡 وابستگی قدیمی followRepository کاملاً حذف شد
+    private val userRepository: UserRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 

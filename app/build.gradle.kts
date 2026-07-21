@@ -7,19 +7,18 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    kotlin("plugin.serialization") version "2.0.20"
+    kotlin("plugin.serialization") version "2.0.20" // ✨ برگردانده شد تا نسخه مشخص باشد
 }
 
-// ۱. خواندن اطلاعات سوپابیس در بالاترین سطح فایل (بیرون از بلاک defaultConfig برای حل ارور)
-val localPropFile = rootProject.file("local.properties")
-var supabaseUrl = ""
-var supabaseKey = ""
-
-if (localPropFile.exists()) {
-    val lines = localPropFile.readLines()
-    supabaseUrl = lines.find { it.startsWith("supabase.url=") }?.substringAfter("=") ?: ""
-    supabaseKey = lines.find { it.startsWith("supabase.key=") }?.substringAfter("=") ?: ""
+// ۱. خواندن ایمن اطلاعات سوپابیس با کلاس استاندارد Properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
+
+val supabaseUrl = localProperties.getProperty("supabase.url", "")
+val supabaseKey = localProperties.getProperty("supabase.key", "")
 
 val finalUrl = "\"${supabaseUrl.trim().removeSurrounding("\"")}\""
 val finalKey = "\"${supabaseKey.trim().removeSurrounding("\"")}\""
@@ -37,7 +36,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // ۲. استفاده مستقیم از مقادیر پردازش شده بدون ایجاد تداخل با اسکوپ defaultConfig
+        // ۲. ارسال آدرس و کلید سوپابیس به BuildConfig
         buildConfigField("String", "SUPABASE_URL", finalUrl)
         buildConfigField("String", "SUPABASE_KEY", finalKey)
     }
@@ -51,14 +50,18 @@ android {
             )
         }
     }
+
+    // ۳. ارتقاء به Java 17 جهت هماهنگی با SDK 35، کامپایلر K2 و Hilt
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -118,18 +121,17 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // لایه واسط هماهنگی کامپوز با سیستم چندزبانگی بومی اندروید
+    // ۷. لایه واسط هماهنگی کامپوز با سیستم چندزبانگی بومی اندروید
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
 
-    // تبدیل اطلاعات شبکه و سرور به کدهای کاتلین (پشتیبانی از DTOهای جدول چت و پیام‌ها)
+    // ۸. سریالایز و تبدیل دیتا (DTO چت و پیام‌ها)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
 
-    // کدهای حیاتی تو برای سوپابیس و کلاینت Ktor
+    // ۹. کلاینت سوپابیس و شبکه Ktor
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.2")
     implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.2")
     implementation("io.ktor:ktor-client-okhttp:2.3.12")
     implementation("io.ktor:ktor-client-cio:2.3.12")
-
 }

@@ -79,6 +79,7 @@ fun HomeScreen(
     onSeeAllClick: (String) -> Unit,
     onLikeClick: (Song) -> Unit,
     onPlaylistClick: (String) -> Unit,
+    onNavigateToSettings: () -> Unit, // ✨ اضافه شدن اتصال به تنظیمات
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { onRefresh() }
@@ -109,8 +110,8 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.background),
                 contentPadding = PaddingValues(bottom = HipkaTheme.dimens.spaceXL)
             ) {
-                // 1. Top App Bar همراه با لوگوی سفارشی
-                item { HomeTopBar() }
+                // 1. Top App Bar همراه با لوگوی سفارشی و اکشن تنظیمات
+                item { HomeTopBar(onNavigateToSettings = onNavigateToSettings) }
 
                 item { Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS)) }
 
@@ -254,8 +255,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeTopBar() {
-    // بررسی زبان برنامه برای نمایش لوگوی مناسب (فارسی یا انگلیسی)
+private fun HomeTopBar(onNavigateToSettings: () -> Unit) {
     val isPersian = LocalConfiguration.current.locales[0].language == "fa"
     val logoResId = if (isPersian) R.drawable.ic_logo_fa else R.drawable.ic_logo_en
 
@@ -266,21 +266,28 @@ private fun HomeTopBar() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // جایگزینی متن اسم برنامه با لوگوی تصویری
         Image(
             painter = painterResource(id = logoResId),
             contentDescription = stringResource(id = R.string.app_name),
             modifier = Modifier
-                .height(38.dp) // ارتفاع استاندارد برای جا گرفتن در تاپ‌بار
-                .width(120.dp), // عرض مناسب
+                .height(38.dp)
+                .width(120.dp),
             contentScale = ContentScale.Fit,
             alignment = Alignment.CenterStart
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TopBarIconButton(icon = Icons.Default.Notifications, contentDescription = "Notifications")
+            TopBarIconButton(
+                icon = Icons.Default.Notifications,
+                contentDescription = "Notifications",
+                onClick = { /* TODO Notifications */ }
+            )
             Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
-            TopBarIconButton(icon = Icons.Default.Settings, contentDescription = "Settings")
+            TopBarIconButton(
+                icon = Icons.Default.Settings,
+                contentDescription = "Settings",
+                onClick = onNavigateToSettings
+            )
             Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
             Box(
                 modifier = Modifier
@@ -300,13 +307,13 @@ private fun HomeTopBar() {
 }
 
 @Composable
-private fun TopBarIconButton(icon: ImageVector, contentDescription: String) {
+private fun TopBarIconButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
     Surface(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         modifier = Modifier.size(38.dp)
     ) {
-        IconButton(onClick = { /* TODO */ }) {
+        IconButton(onClick = onClick) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
@@ -535,7 +542,7 @@ private fun SongHorizontalList(
 private fun SquareSongCard(
     song: Song,
     onClick: () -> Unit,
-    onLikeClick: () -> Unit
+    onLikeClick: (Song) -> Unit
 ) {
     Card(
         onClick = onClick,
@@ -583,7 +590,7 @@ private fun SquareSongCard(
                     )
                 }
 
-                IconButton(onClick = onLikeClick, modifier = Modifier.size(22.dp)) {
+                IconButton(onClick = { onLikeClick(song) }, modifier = Modifier.size(22.dp)) {
                     Icon(
                         imageVector = if (song.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Toggle Like",

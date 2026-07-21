@@ -2,6 +2,7 @@ package com.hipka.app.data.repository
 
 import com.hipka.app.data.local.datastore.SessionManager
 import com.hipka.app.data.remote.api.UserApi
+import com.hipka.app.data.remote.dto.PremiumUpdateDto
 import com.hipka.app.data.remote.dto.UserDto
 import com.hipka.app.data.remote.dto.UserFollowDto
 import com.hipka.app.data.remote.dto.toDomain
@@ -42,6 +43,15 @@ class UserRepositoryImpl @Inject constructor(
         )
     }
 
+    // متد تغیر وضعیت پریمیوم
+    override suspend fun setPremiumStatus(userId: String, isPremium: Boolean) {
+        userApi.updatePremiumStatus(
+            idFilter = "eq.$userId",
+            body = PremiumUpdateDto(isPremium = isPremium)
+        )
+    }
+
+    // متدهای احراز هویت
     override suspend fun login(email: String, password: String): Result<User> {
         return try {
             val users = userApi.loginUser(emailFilter = "eq.$email", passwordFilter = "eq.$password")

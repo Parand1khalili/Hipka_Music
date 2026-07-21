@@ -6,8 +6,9 @@ data class ProfileUiState(
     val currentUser: User? = null,
     val allUsers: List<User> = emptyList(),
     val followingIds: Set<String> = emptySet(),
-    val followerIds: Set<String> = emptySet(), // ✨ اضافه شدن لیست زنده فالوورها
+    val followerIds: Set<String> = emptySet(),
     val isLoading: Boolean = true,
+    val isUpgradingPremium: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -15,4 +16,5 @@ sealed interface ProfileIntent {
     data class SelectDemoUser(val userId: String) : ProfileIntent
     data object Logout : ProfileIntent
     data object Retry : ProfileIntent
+    data object UpgradePremium : ProfileIntent
 }

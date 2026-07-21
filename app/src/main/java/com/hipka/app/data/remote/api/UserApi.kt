@@ -1,13 +1,16 @@
 package com.hipka.app.data.remote.api
 
+import com.hipka.app.data.remote.dto.PremiumUpdateDto
 import com.hipka.app.data.remote.dto.UserDto
 import com.hipka.app.data.remote.dto.UserFollowDto
-import retrofit2.http.GET
-import retrofit2.http.Query
-import retrofit2.http.POST
-import retrofit2.http.DELETE
+import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.PATCH
+import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface UserApi {
 
@@ -32,15 +35,13 @@ interface UserApi {
         @Query("select") select: String = "*"
     ): List<UserDto>
 
-    //  متد لاگین کاربر با ایمیل و رمز عبور
+    // متدهای لاگین و ثبت‌نام (اضافه‌شده توسط هم‌گروهی)
     @GET("rest/v1/users")
     suspend fun loginUser(
         @Query("email") emailFilter: String,
         @Query("password") passwordFilter: String,
         @Query("select") select: String = "*"
     ): List<UserDto>
-
-    //  متد ایجاد اکانت جدید (ثبت نام)
 
     @Headers("Prefer: return=representation")
     @POST("rest/v1/users")
@@ -50,13 +51,13 @@ interface UserApi {
 
     @GET("rest/v1/user_follows")
     suspend fun getFollowings(
-        @Query("follower_id") followerFilter: String,
+        @Query("follower_id") followerFilter: String, // pass as "eq.<userId>"
         @Query("select") select: String = "*"
     ): List<UserFollowDto>
 
     @GET("rest/v1/user_follows")
     suspend fun getFollowers(
-        @Query("following_id") followingFilter: String,
+        @Query("following_id") followingFilter: String, // pass as "eq.<userId>"
         @Query("select") select: String = "*"
     ): List<UserFollowDto>
 
@@ -65,7 +66,14 @@ interface UserApi {
 
     @DELETE("rest/v1/user_follows")
     suspend fun unfollowUser(
-        @Query("follower_id") followerFilter: String,
-        @Query("following_id") followingFilter: String
+        @Query("follower_id") followerFilter: String, // "eq.<myId>"
+        @Query("following_id") followingFilter: String // "eq.<targetId>"
     )
+
+    // متد تغییر وضعیت پریمیوم (اضافه‌شده توسط شما)
+    @PATCH("rest/v1/users")
+    suspend fun updatePremiumStatus(
+        @Query("id") idFilter: String, // pass as "eq.<id>"
+        @Body body: PremiumUpdateDto
+    ): Response<Unit>
 }

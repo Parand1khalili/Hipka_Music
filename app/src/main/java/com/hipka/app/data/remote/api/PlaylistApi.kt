@@ -8,7 +8,7 @@ interface PlaylistApi {
 
     @GET("rest/v1/playlists")
     suspend fun getPlaylistsByCategory(
-        @Query("category") categoryFilter: String, // pass as "eq.<category>"
+        @Query("category") categoryFilter: String, // pass as "ilike.<category>" (case-insensitive, see PlaylistRepositoryImpl)
         @Query("select") select: String = "*"
     ): List<PlaylistDto>
 

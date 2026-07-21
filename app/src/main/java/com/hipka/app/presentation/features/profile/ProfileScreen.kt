@@ -11,18 +11,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,44 +46,58 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.hipka.app.R
-import com.hipka.app.core.locale.LocaleManager
-import com.hipka.app.data.local.datastore.ThemeMode
 import com.hipka.app.domain.model.User
-import com.hipka.app.presentation.main.MainIntent
-import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    mainUiState: MainUiState,
-    onMainIntent: (MainIntent) -> Unit,
     onNavigateToFollowedUsers: (String) -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // ✨ هماهنگ‌سازی لایف‌سایکل: هربار کاربر وارد این تب می‌شود، اطلاعات به صورت زنده ریفرش می‌شوند
     LaunchedEffect(Unit) {
         viewModel.onIntent(ProfileIntent.Retry)
     }
 
-    when {
-        uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { },
+                actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(id = R.string.settings_title)
+                        )
+                    }
+                }
+            )
         }
-        uiState.currentUser == null -> DemoUserPicker(
-            users = uiState.allUsers,
-            onPick = { viewModel.onIntent(ProfileIntent.SelectDemoUser(it)) }
-        )
-        else -> ProfileContent(
-            user = uiState.currentUser!!,
-            uiState = uiState,
-            mainUiState = mainUiState,
-            onMainIntent = onMainIntent,
-            onNavigateToFollowedUsers = onNavigateToFollowedUsers,
-            onLogout = { viewModel.onIntent(ProfileIntent.Logout) }
-        )
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when {
+                uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                uiState.currentUser == null -> DemoUserPicker(
+                    users = uiState.allUsers,
+                    onPick = { viewModel.onIntent(ProfileIntent.SelectDemoUser(it)) }
+                )
+                else -> ProfileContent(
+                    uiState = uiState,
+                    onNavigateToFollowedUsers = onNavigateToFollowedUsers,
+                    onUpgradePremium = { viewModel.onIntent(ProfileIntent.UpgradePremium) },
+                    onLogout = { viewModel.onIntent(ProfileIntent.Logout) }
+                )
+            }
+        }
     }
 }
 
@@ -103,13 +125,13 @@ private fun DemoUserPicker(users: List<User>, onPick: (String) -> Unit) {
 
 @Composable
 private fun ProfileContent(
-    user: User,
     uiState: ProfileUiState,
-    mainUiState: MainUiState,
-    onMainIntent: (MainIntent) -> Unit,
     onNavigateToFollowedUsers: (String) -> Unit,
+    onUpgradePremium: () -> Unit,
     onLogout: () -> Unit
 ) {
+    val user = uiState.currentUser ?: return
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -119,19 +141,28 @@ private fun ProfileContent(
         UserAvatar(user, size = HipkaTheme.dimens.albumCoverM)
         Spacer(Modifier.height(HipkaTheme.dimens.spaceS))
         Text(text = user.name, style = MaterialTheme.typography.titleLarge)
+
         if (user.isPremium) {
             Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
-            AssistChip(onClick = {}, label = { Text(stringResource(id = R.string.premium)) })
+            AssistChip(
+                onClick = {},
+                label = { Text(stringResource(id = R.string.premium)) },
+                leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    leadingIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
         }
 
         Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
 
-        // 📊 بخش آمار فالوور و فالووینگ با استایل کاملاً همسان، بولد و زیبا
+        // آمار فالوورها و فالوئینگ‌ها
         Row(
             horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // کلیک روی فالوورها
             Text(
                 text = "${uiState.followerIds.size} ${stringResource(id = R.string.followers)}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -145,7 +176,6 @@ private fun ProfileContent(
                 text = "•",
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
-            // کلیک روی فالووینگ‌ها
             Text(
                 text = "${uiState.followingIds.size} ${stringResource(id = R.string.following)}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -159,47 +189,51 @@ private fun ProfileContent(
 
         Spacer(Modifier.height(HipkaTheme.dimens.spaceL))
 
-        Text(text = stringResource(id = R.string.language), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
-        Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
-            FilterChip(
-                selected = mainUiState.languageCode == LocaleManager.LANGUAGE_ENGLISH,
-                onClick = { onMainIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_ENGLISH)) },
-                label = { Text("English") }
-            )
-            FilterChip(
-                selected = mainUiState.languageCode == LocaleManager.LANGUAGE_PERSIAN,
-                onClick = { onMainIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_PERSIAN)) },
-                label = { Text("فارسی") }
-            )
-        }
+        // کارت خرید/فعال‌سازی اشتراک پریمیوم
+        PremiumCard(
+            isPremium = user.isPremium,
+            isProcessing = uiState.isUpgradingPremium,
+            onUpgradeClick = onUpgradePremium
+        )
 
-        Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
+        // 👈 اصلاح فاصله منطقی و استاندارد
+        Spacer(Modifier.height(HipkaTheme.dimens.spaceL))
 
-        Text(text = stringResource(id = R.string.theme), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
-        Row(horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
-            FilterChip(
-                selected = mainUiState.themeMode == ThemeMode.LIGHT,
-                onClick = { onMainIntent(MainIntent.ChangeThemeMode(ThemeMode.LIGHT)) },
-                label = { Text(stringResource(id = R.string.theme_light)) }
-            )
-            FilterChip(
-                selected = mainUiState.themeMode == ThemeMode.DARK,
-                onClick = { onMainIntent(MainIntent.ChangeThemeMode(ThemeMode.DARK)) },
-                label = { Text(stringResource(id = R.string.theme_dark)) }
-            )
-            FilterChip(
-                selected = mainUiState.themeMode == ThemeMode.SYSTEM,
-                onClick = { onMainIntent(MainIntent.ChangeThemeMode(ThemeMode.SYSTEM)) },
-                label = { Text(stringResource(id = R.string.theme_system)) }
-            )
-        }
-
-        Spacer(Modifier.height(HipkaTheme.dimens.spaceXL))
-
+        // دکمه سوییچ کاربر دمو / خروج
         OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(id = R.string.switch_demo_user))
+        }
+    }
+}
+
+@Composable
+private fun PremiumCard(isPremium: Boolean, isProcessing: Boolean, onUpgradeClick: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(HipkaTheme.dimens.spaceM)) {
+            Text(
+                text = if (isPremium) stringResource(id = R.string.premium_active_desc)
+                else stringResource(id = R.string.premium_free_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(HipkaTheme.dimens.spaceS))
+            Button(
+                onClick = onUpgradeClick,
+                enabled = !isPremium && !isProcessing,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isProcessing) {
+                    Text(stringResource(id = R.string.premium_processing))
+                } else if (isPremium) {
+                    Text(stringResource(id = R.string.premium_active_button))
+                } else {
+                    Text(stringResource(id = R.string.premium_upgrade_button))
+                }
+            }
         }
     }
 }
