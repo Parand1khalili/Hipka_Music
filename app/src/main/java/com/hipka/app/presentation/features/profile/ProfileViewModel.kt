@@ -7,6 +7,7 @@ import com.hipka.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,12 +38,19 @@ class ProfileViewModel @Inject constructor(
             is ProfileIntent.SelectDemoUser -> selectDemoUser(intent.userId)
             ProfileIntent.Logout -> logout()
             ProfileIntent.Retry -> retry()
+            ProfileIntent.UpgradePremium -> upgradePremium()
         }
     }
 
     private suspend fun loadDemoUserPicker() {
         _uiState.update {
-            it.copy(isLoading = true, currentUser = null, followingIds = emptySet(), followerIds = emptySet(), errorMessage = null)
+            it.copy(
+                isLoading = true,
+                currentUser = null,
+                followingIds = emptySet(),
+                followerIds = emptySet(),
+                errorMessage = null
+            )
         }
         runCatching { userRepository.getAllUsers() }
             .onSuccess { users -> _uiState.update { it.copy(allUsers = users, isLoading = false) } }
@@ -55,7 +63,7 @@ class ProfileViewModel @Inject constructor(
             coroutineScope {
                 val userDeferred = async { userRepository.getUserById(userId) }
                 val followingDeferred = async { userRepository.getFollowingIds(userId) }
-                val followerDeferred = async { userRepository.getFollowerIds(userId) } // ✨ واکشی موازی فالوورها
+                val followerDeferred = async { userRepository.getFollowerIds(userId) }
 
                 Triple(userDeferred.await(), followingDeferred.await(), followerDeferred.await())
             }
@@ -64,7 +72,7 @@ class ProfileViewModel @Inject constructor(
                 it.copy(
                     currentUser = user,
                     followingIds = followingIds.toSet(),
-                    followerIds = followerIds.toSet(), // ✨ قرارگیری در استیت لایه فرانت
+                    followerIds = followerIds.toSet(),
                     isLoading = false
                 )
             }
@@ -85,6 +93,28 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = sessionManager.currentUserId.first()
             if (userId == null) loadDemoUserPicker() else loadCurrentUser(userId)
+        }
+    }
+
+    private fun upgradePremium() {
+        val user = _uiState.value.currentUser ?: return
+        if (user.isPremium || _uiState.value.isUpgradingPremium) return
+
+        _uiState.update { it.copy(isUpgradingPremium = true) }
+        viewModelScope.launch {
+            delay(1500)
+            runCatching { userRepository.setPremiumStatus(user.id, true) }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            currentUser = user.copy(isPremium = true),
+                            isUpgradingPremium = false
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isUpgradingPremium = false, errorMessage = e.message) }
+                }
         }
     }
 }

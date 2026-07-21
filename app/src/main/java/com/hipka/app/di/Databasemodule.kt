@@ -3,6 +3,7 @@ package com.hipka.app.di
 import android.content.Context
 import androidx.room.Room
 import com.hipka.app.data.local.database.HipkaDatabase
+import com.hipka.app.data.local.dao.MessageDao
 import com.hipka.app.data.local.dao.SongDao
 import com.hipka.app.data.local.dao.SearchHistoryDao
 import dagger.Module
@@ -34,6 +35,9 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSearchHistoryDao(database: HipkaDatabase): SearchHistoryDao =
-        database.searchHistoryDao
+    fun provideSearchHistoryDao(database: HipkaDatabase): SearchHistoryDao = database.searchHistoryDao
+
+    @Provides
+    @Singleton
+    fun provideMessageDao(database: HipkaDatabase): MessageDao = database.messageDao
 }

@@ -11,7 +11,7 @@ class PlaylistRepositoryImpl @Inject constructor(
 ) : PlaylistRepository {
 
     override suspend fun getPlaylistsByCategory(category: String): List<Playlist> =
-        playlistApi.getPlaylistsByCategory(categoryFilter = "eq.$category").map { it.toDomain() }
+        playlistApi.getPlaylistsByCategory(categoryFilter = "ilike.$category").map { it.toDomain() }
 
     override suspend fun getUserPlaylists(ownerId: String): List<Playlist> =
         playlistApi.getUserPlaylists(ownerIdFilter = "eq.$ownerId").map { it.toDomain() }

@@ -60,27 +60,20 @@
     <string name="home_see_all">See all ></string>
     <string name="home_featured_today">FEATURED TODAY</string>
 
+    <!-- Liked & Recent Songs -->
     <string name="liked_songs_title">Liked Songs</string>
     <string name="no_liked_songs">No Liked Songs Yet</string>
     <string name="no_liked_songs_desc">Songs you like will appear here so you can listen to them later.</string>
     <string name="recently_played_title">Recently Played</string>
     <string name="no_recent_songs">No Listening History</string>
     <string name="no_recent_songs_desc">Songs you listen to will appear here.</string>
-    <string name="followed_users">Followed users</string>
-    <string name="language">Language</string>
-    <string name="theme">Theme</string>
-    <string name="switch_demo_user">Switch demo user</string>
+
+    <!-- Playlists -->
     <string name="no_playlists_yet">No playlists yet</string>
     <string name="no_playlists_desc">World, local, and your own playlists will show up here.</string>
-    <string name="demo_user_picker_title">No auth system yet — pick a demo user to act as:</string>
-    <string name="premium">Premium</string>
-    <string name="theme_light">Light</string>
-    <string name="theme_dark">Dark</string>
-    <string name="theme_system">System</string>
-    <string name="btn_follow">Follow</string>
-    <string name="btn_unfollow">Unfollow</string>
-    <string name="chat_input_hint">Message</string>
-    <string name="tap_to_chat_hint">Tap to open chat</string>
+
+    <!-- Social & Followers -->
+    <string name="followed_users">Followed users</string>
     <string name="nav_discover_users">Discover People</string>
     <string name="followers">Followers</string>
     <string name="following">Following</string>
@@ -88,5 +81,36 @@
     <string name="no_followers_found">No followers found</string>
     <string name="no_following_found">No following found</string>
     <string name="no_users_found">No users found</string>
+    <string name="btn_follow">Follow</string>
+    <string name="btn_unfollow">Unfollow</string>
     <string name="play_count_suffix">plays</string>
+
+    <!-- Profile & Demo Auth -->
+    <string name="language">Language</string>
+    <string name="theme">Theme</string>
+    <string name="switch_demo_user">Switch demo user</string>
+    <string name="demo_user_picker_title">No auth system yet — pick a demo user to act as:</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
+
+    <!-- Chat -->
+    <string name="chat_input_hint">Message</string>
+    <string name="chat_message_hint">Message</string>
+    <string name="tap_to_chat_hint">Tap to open chat</string>
+    <string name="chat_typing_indicator">typing…</string>
+    <string name="chat_share_song_cd">Share a song</string>
+    <string name="chat_pick_song_title">Send a song</string>
+    <string name="chat_no_songs_to_share">No songs available to share yet.</string>
+    <string name="chat_no_auth_message">Pick a demo user on the Profile tab first.</string>
+
+    <!-- Premium Section -->
+    <string name="premium">Premium</string>
+    <string name="premium_badge">Premium</string>
+    <string name="premium_upgrade_button">Upgrade to Premium</string>
+    <string name="premium_manage_button">Manage Subscription</string>
+    <string name="premium_active_button">You\'re Premium</string>
+    <string name="premium_processing">Processing…</string>
+    <string name="premium_active_desc">You are a Premium member. Enjoy offline song downloads!</string>
+    <string name="premium_free_desc">Upgrade to Premium to download your favorite songs for offline listening.</string>
 </resources>

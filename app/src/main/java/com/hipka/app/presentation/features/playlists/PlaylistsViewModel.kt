@@ -36,8 +36,8 @@ class PlaylistsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
-                val world = playlistRepository.getPlaylistsByCategory("world")
-                val local = playlistRepository.getPlaylistsByCategory("local")
+                val world = playlistRepository.getPlaylistsByCategory("WORLD")
+                val local = playlistRepository.getPlaylistsByCategory("LOCAL")
                 val myId = sessionManager.currentUserId.first()
                 val mine = myId?.let { playlistRepository.getUserPlaylists(it) } ?: emptyList()
                 Triple(world, local, mine)

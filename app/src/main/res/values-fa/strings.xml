@@ -2,12 +2,14 @@
 <resources>
     <string name="app_name">هیپکا</string>
 
+    <!-- Bottom navigation -->
     <string name="nav_home">خانه</string>
     <string name="nav_search">جستجو</string>
     <string name="nav_downloads">دانلودها</string>
     <string name="nav_playlists">پلی\u200cلیست\u200cها</string>
     <string name="nav_profile">پروفایل</string>
 
+    <!-- Settings screen -->
     <string name="settings_title">تنظیمات</string>
     <string name="settings_language">زبان</string>
     <string name="settings_language_english">انگلیسی</string>
@@ -18,11 +20,13 @@
     <string name="settings_theme_system">هماهنگ با سیستم</string>
     <string name="settings_logout">خروج از حساب</string>
 
+    <!-- Generic states -->
     <string name="error_generic">مشکلی پیش آمد. دوباره تلاش کنید.</string>
     <string name="error_no_internet">اتصال اینترنت برقرار نیست.</string>
     <string name="empty_state_no_results">نتیجه\u200cای یافت نشد.</string>
     <string name="loading">در حال بارگذاری…</string>
 
+    <!-- Player -->
     <string name="player_play_cd">پخش</string>
     <string name="player_pause_cd">توقف</string>
     <string name="player_skip_next_cd">بعدی</string>
@@ -56,27 +60,20 @@
     <string name="home_see_all"><![CDATA[مشاهده همه >]]></string>
     <string name="home_featured_today">پیشنهاد ویژه امروز</string>
 
+    <!-- Liked & Recent Songs -->
     <string name="liked_songs_title">آهنگ‌های پسندیده</string>
     <string name="no_liked_songs">هنوز آهنگی را نپسندیده‌اید</string>
     <string name="no_liked_songs_desc">آهنگ‌هایی که لایک می‌کنید اینجا نمایش داده می‌شوند.</string>
     <string name="recently_played_title">اخیراً پخش شده</string>
     <string name="no_recent_songs">تاریخچه پخش خالی است</string>
     <string name="no_recent_songs_desc">آهنگ‌هایی که گوش می‌دهید اینجا ظاهر می‌شوند.</string>
-    <string name="followed_users">کاربران دنبال شده</string>
-    <string name="language">زبان برنامه</string>
-    <string name="theme">تم</string>
-    <string name="switch_demo_user">تغییر کاربر دمو</string>
+
+    <!-- Playlists -->
     <string name="no_playlists_yet">هنوز پلی‌لیستی وجود ندارد</string>
     <string name="no_playlists_desc">پلی‌لیست‌های جهانی، محلی و شخصی شما در اینجا نمایش داده می‌شوند.</string>
-    <string name="demo_user_picker_title">سیستم ورود هنوز پیاده نشده — یک کاربر دمو انتخاب کنید:</string>
-    <string name="premium">ویژه</string>
-    <string name="theme_light">روشن</string>
-    <string name="theme_dark">تاریک</string>
-    <string name="theme_system">سیستم</string>
-    <string name="btn_follow">دنبال کردن</string>
-    <string name="btn_unfollow">دنبال شده</string>
-    <string name="chat_input_hint">پیام خود را بنویسید…</string>
-    <string name="tap_to_chat_hint">برای گفتگو ضربه بزنید</string>
+
+    <!-- Social & Followers -->
+    <string name="followed_users">کاربران دنبال شده</string>
     <string name="nav_discover_users">کشف کاربران</string>
     <string name="followers">دنبال‌کننده</string>
     <string name="following">دنبال‌شونده</string>
@@ -84,5 +81,36 @@
     <string name="no_followers_found">دنبال‌کننده‌ای یافت نشد</string>
     <string name="no_following_found">در حال حاضر کسی را دنبال نمی‌کنید</string>
     <string name="no_users_found">کاربری یافت نشد</string>
+    <string name="btn_follow">دنبال کردن</string>
+    <string name="btn_unfollow">دنبال شده</string>
     <string name="play_count_suffix">پخش</string>
+
+    <!-- Profile & Demo Auth -->
+    <string name="language">زبان برنامه</string>
+    <string name="theme">تم</string>
+    <string name="switch_demo_user">تغییر کاربر دمو</string>
+    <string name="demo_user_picker_title">سیستم ورود هنوز پیاده نشده — یک کاربر دمو انتخاب کنید:</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تاریک</string>
+    <string name="theme_system">سیستم</string>
+
+    <!-- Chat -->
+    <string name="chat_input_hint">پیام خود را بنویسید…</string>
+    <string name="chat_message_hint">پیام</string>
+    <string name="tap_to_chat_hint">برای گفتگو ضربه بزنید</string>
+    <string name="chat_typing_indicator">در حال تایپ…</string>
+    <string name="chat_share_song_cd">اشتراک‌گذاری آهنگ</string>
+    <string name="chat_pick_song_title">ارسال آهنگ</string>
+    <string name="chat_no_songs_to_share">هنوز آهنگی برای اشتراک‌گذاری موجود نیست.</string>
+    <string name="chat_no_auth_message">ابتدا از تب پروفایل یک کاربر آزمایشی انتخاب کنید.</string>
+
+    <!-- بخش پریمیوم -->
+    <string name="premium">ویژه</string>
+    <string name="premium_badge">ویژه</string>
+    <string name="premium_upgrade_button">ارتقاء به حساب ویژه</string>
+    <string name="premium_manage_button">مدیریت اشتراک</string>
+    <string name="premium_active_button">شما کاربر ویژه هستید</string>
+    <string name="premium_processing">در حال پردازش…</string>
+    <string name="premium_active_desc">اشتراک ویژه شما فعال است. می‌توانید آهنگ‌ها را دانلود کرده و آفلاین گوش دهید!</string>
+    <string name="premium_free_desc">برای دانلود آهنگ‌ها و پخش آفلاین، حساب خود را به ویژه ارتقاء دهید.</string>
 </resources>

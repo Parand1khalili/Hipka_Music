@@ -34,7 +34,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.FavoriteBorder // ایمپورت جدید برای قلب توخالی
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,14 +44,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -69,13 +65,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    likedSongIds: Set<String>, // اضافه شد
+    likedSongIds: Set<String>,
     onSongClick: (Song) -> Unit,
     onRefresh: () -> Unit,
     onQuickActionClick: (String) -> Unit,
     onSeeAllClick: (String) -> Unit,
-    onLikeClick: (Song) -> Unit, // تغییر به Song
-    onPlaylistClick: (String) -> Unit, // ✨ اضافه شدن این کالبک برای زنده کردن دکمه‌های کلیک روی ردیف پلی‌لیست‌ها
+    onLikeClick: (Song) -> Unit,
+    onPlaylistClick: (String) -> Unit,
+    onNavigateToSettings: () -> Unit, // ✨ اضافه شدن کالبک ناوبری به تنظیمات
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { onRefresh() }
@@ -104,8 +101,8 @@ fun HomeScreen(
                 modifier = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = HipkaTheme.dimens.spaceXL)
             ) {
-                // 1. Top App Bar
-                item { HomeTopBar() }
+                // 1. Top App Bar (اتصال اکشن تنظیمات)
+                item { HomeTopBar(onNavigateToSettings = onNavigateToSettings) }
 
                 // 2. Featured Carousel Pager
                 if (uiState.carouselSongs.isNotEmpty()) {
@@ -184,7 +181,6 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        // آپدیت: onLikeClick به لیست افقی پاس داده می‌شود
                         SongHorizontalList(
                             songs = uiState.popularSongs.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
                             onSongClick = onSongClick,
@@ -202,7 +198,6 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        // آپدیت: onLikeClick به لیست افقی پاس داده می‌شود
                         SongHorizontalList(
                             songs = uiState.newReleases.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
                             onSongClick = onSongClick,
@@ -211,7 +206,7 @@ fun HomeScreen(
                     }
                 }
 
-                // 6. Global Playlists (✨ اعمال کالبک جدید روی کلیک لیست افقی موسیقی جهان)
+                // 6. Global Playlists
                 if (uiState.globalPlaylists.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -227,7 +222,7 @@ fun HomeScreen(
                     }
                 }
 
-                // 7. Local Playlists (✨ اعمال کالبک جدید روی کلیک لیست افقی موسیقی محلی)
+                // 7. Local Playlists
                 if (uiState.localPlaylists.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -248,7 +243,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeTopBar() {
+private fun HomeTopBar(onNavigateToSettings: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -270,10 +265,11 @@ private fun HomeTopBar() {
                     .background(MaterialTheme.colorScheme.primaryContainer)
             )
             Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
-            IconButton(onClick = { /* TODO */ }) {
+            IconButton(onClick = { /* TODO Notifications */ }) {
                 Icon(imageVector = Icons.Default.Notifications, contentDescription = "Notifications")
             }
-            IconButton(onClick = { /* TODO */ }) {
+            // ✨ فعال شدن کلیک رو چرخ‌دنده برای رفتن به صفحه تنظیمات
+            IconButton(onClick = onNavigateToSettings) {
                 Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
             }
         }
@@ -438,7 +434,6 @@ private fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
 private fun SongHorizontalList(
     songs: List<Song>,
     onSongClick: (Song) -> Unit,
-    // آپدیت مهم: اینجا String به Song تغییر کرد تا ارور رفع شود
     onLikeClick: (Song) -> Unit
 ) {
     LazyRow(
@@ -449,7 +444,7 @@ private fun SongHorizontalList(
             SquareSongCard(
                 song = song,
                 onClick = { onSongClick(song) },
-                onLikeClick = { onLikeClick(song) } // ارسال کل آهنگ
+                onLikeClick = { onLikeClick(song) }
             )
         }
     }
@@ -461,7 +456,6 @@ private fun SquareSongCard(
     onClick: () -> Unit,
     onLikeClick: () -> Unit
 ) {
-    // هک isLikedLocal به طور کامل پاک شد. حالا دیتابیس به صورت زنده این را کنترل می‌کند.
     Column(
         modifier = Modifier
             .width(140.dp)
@@ -497,7 +491,6 @@ private fun SquareSongCard(
                 )
             }
 
-            // خواندن مستقیم وضعیت لایک از دیتابیس (بدون تاخیر)
             IconButton(onClick = onLikeClick, modifier = Modifier.size(24.dp)) {
                 Icon(
                     imageVector = if (song.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,

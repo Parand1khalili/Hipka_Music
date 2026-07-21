@@ -1,9 +1,12 @@
 package com.hipka.app.data.remote.api
 
 import com.hipka.app.data.remote.dto.MessageDto
+import com.hipka.app.data.remote.dto.MessageStatusUpdateDto
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -20,4 +23,14 @@ interface MessageApi {
     @Headers("Prefer: return=representation")
     @POST("rest/v1/messages")
     suspend fun sendMessage(@Body message: MessageDto): List<MessageDto>
+
+    // Bulk "mark as read" for an entire conversation direction — everything
+    // the peer sent me that isn't already READ.
+    @PATCH("rest/v1/messages")
+    suspend fun markConversationAsRead(
+        @Query("sender_id") senderIdFilter: String, // "eq.<peerId>"
+        @Query("receiver_id") receiverIdFilter: String, // "eq.<myId>"
+        @Query("status") notYetReadFilter: String = "neq.READ",
+        @Body body: MessageStatusUpdateDto = MessageStatusUpdateDto(status = "READ")
+    ): Response<Unit>
 }
