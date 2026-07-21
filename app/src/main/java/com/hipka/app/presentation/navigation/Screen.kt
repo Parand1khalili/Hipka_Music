@@ -2,6 +2,7 @@ package com.hipka.app.presentation.navigation
 
 sealed class Screen(val route: String) {
 
+    data object Auth : Screen("auth")
     // مقصدهای منوی پایین صفحه (Bottom Navigation)
     data object Home : Screen("home")
     data object Search : Screen("search")
@@ -30,4 +31,10 @@ sealed class Screen(val route: String) {
         fun createRoute(section: String) = "see_all/$section"
     }
     data object TopArtists : Screen("top_artists")
+    object ArtistDetail : Screen("artist_detail/{artistName}/{imageUrl}") {
+        fun createRoute(artistName: String, imageUrl: String): String {
+            val encodedUrl = java.net.URLEncoder.encode(imageUrl, "UTF-8")
+            return "artist_detail/$artistName/$encodedUrl"
+        }
+    }
 }

@@ -7,6 +7,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
@@ -34,6 +35,20 @@ interface UserApi {
         @Query("select") select: String = "*"
     ): List<UserDto>
 
+    // متدهای لاگین و ثبت‌نام (اضافه‌شده توسط هم‌گروهی)
+    @GET("rest/v1/users")
+    suspend fun loginUser(
+        @Query("email") emailFilter: String,
+        @Query("password") passwordFilter: String,
+        @Query("select") select: String = "*"
+    ): List<UserDto>
+
+    @Headers("Prefer: return=representation")
+    @POST("rest/v1/users")
+    suspend fun registerUser(
+        @Body user: UserDto
+    ): List<UserDto>
+
     @GET("rest/v1/user_follows")
     suspend fun getFollowings(
         @Query("follower_id") followerFilter: String, // pass as "eq.<userId>"
@@ -46,7 +61,6 @@ interface UserApi {
         @Query("select") select: String = "*"
     ): List<UserFollowDto>
 
-
     @POST("rest/v1/user_follows")
     suspend fun followUser(@Body relationship: UserFollowDto)
 
@@ -56,6 +70,7 @@ interface UserApi {
         @Query("following_id") followingFilter: String // "eq.<targetId>"
     )
 
+    // متد تغییر وضعیت پریمیوم (اضافه‌شده توسط شما)
     @PATCH("rest/v1/users")
     suspend fun updatePremiumStatus(
         @Query("id") idFilter: String, // pass as "eq.<id>"

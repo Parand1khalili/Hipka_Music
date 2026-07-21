@@ -14,13 +14,6 @@ import javax.inject.Singleton
 
 private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "hipka_session")
 
-/**
- * Placeholder for a real auth system — the project has none yet (no login
- * screen anywhere in the spec). This just remembers which row in `users` the
- * tester is "acting as", so Follow/Chat/Profile have a `myUserId` to work
- * with. Swap this out wholesale once real auth lands; everything else only
- * ever reads [currentUserId], so nothing above this class needs to change.
- */
 @Singleton
 class SessionManager @Inject constructor(
     @ApplicationContext private val context: Context
@@ -31,6 +24,9 @@ class SessionManager @Inject constructor(
 
     val currentUserId: Flow<String?> =
         context.sessionDataStore.data.map { it[Keys.CURRENT_USER_ID] }
+
+    val isLoggedIn: Flow<Boolean> =
+        currentUserId.map { !it.isNullOrBlank() }
 
     suspend fun setCurrentUser(userId: String) {
         context.sessionDataStore.edit { it[Keys.CURRENT_USER_ID] = userId }

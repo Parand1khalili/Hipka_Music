@@ -98,6 +98,11 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
 
+    // دانلود آفلاین در پس‌زمینه با WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
     // ۵. کتابخانه‌های مالتی‌مدیا و ارتباط با سرور (پخش موزیک و وب‌سوکت)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)

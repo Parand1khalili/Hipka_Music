@@ -3,6 +3,7 @@ package com.hipka.app.presentation.features.home
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -35,6 +36,8 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,9 +50,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,7 +79,7 @@ fun HomeScreen(
     onSeeAllClick: (String) -> Unit,
     onLikeClick: (Song) -> Unit,
     onPlaylistClick: (String) -> Unit,
-    onNavigateToSettings: () -> Unit, // ✨ اضافه شدن کالبک ناوبری به تنظیمات
+    onNavigateToSettings: () -> Unit, // ✨ اضافه شدن اتصال به تنظیمات
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { onRefresh() }
@@ -98,11 +105,15 @@ fun HomeScreen(
         }
         else -> {
             LazyColumn(
-                modifier = modifier.fillMaxSize(),
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
                 contentPadding = PaddingValues(bottom = HipkaTheme.dimens.spaceXL)
             ) {
-                // 1. Top App Bar (اتصال اکشن تنظیمات)
+                // 1. Top App Bar همراه با لوگوی سفارشی و اکشن تنظیمات
                 item { HomeTopBar(onNavigateToSettings = onNavigateToSettings) }
+
+                item { Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS)) }
 
                 // 2. Featured Carousel Pager
                 if (uiState.carouselSongs.isNotEmpty()) {
@@ -133,33 +144,34 @@ fun HomeScreen(
                                 state = pagerState,
                                 modifier = Modifier.fillMaxWidth(),
                                 contentPadding = PaddingValues(horizontal = HipkaTheme.dimens.spaceL),
-                                pageSpacing = HipkaTheme.dimens.spaceS
+                                pageSpacing = HipkaTheme.dimens.spaceM
                             ) { page ->
                                 FeaturedBanner(
                                     song = uiState.carouselSongs[page],
                                     onClick = { onSongClick(uiState.carouselSongs[page]) },
-                                    modifier = Modifier.padding(vertical = HipkaTheme.dimens.spaceS)
+                                    modifier = Modifier.padding(vertical = HipkaTheme.dimens.spaceXS)
                                 )
                             }
 
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = HipkaTheme.dimens.spaceS),
+                                    .padding(top = HipkaTheme.dimens.spaceS, bottom = HipkaTheme.dimens.spaceXS),
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 repeat(uiState.carouselSongs.size) { index ->
-                                    val color = if (pagerState.currentPage == index) {
+                                    val selected = pagerState.currentPage == index
+                                    val color = if (selected) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
                                     }
                                     Box(
                                         modifier = Modifier
-                                            .padding(3.dp)
+                                            .padding(horizontal = 3.dp)
                                             .clip(CircleShape)
                                             .background(color)
-                                            .size(8.dp)
+                                            .size(width = if (selected) 18.dp else 6.dp, height = 6.dp)
                                     )
                                 }
                             }
@@ -244,6 +256,9 @@ fun HomeScreen(
 
 @Composable
 private fun HomeTopBar(onNavigateToSettings: () -> Unit) {
+    val isPersian = LocalConfiguration.current.locales[0].language == "fa"
+    val logoResId = if (isPersian) R.drawable.ic_logo_fa else R.drawable.ic_logo_en
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -251,27 +266,60 @@ private fun HomeTopBar(onNavigateToSettings: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = stringResource(id = R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onBackground
+        Image(
+            painter = painterResource(id = logoResId),
+            contentDescription = stringResource(id = R.string.app_name),
+            modifier = Modifier
+                .height(38.dp)
+                .width(120.dp),
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.CenterStart
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer)
+            TopBarIconButton(
+                icon = Icons.Default.Notifications,
+                contentDescription = "Notifications",
+                onClick = { /* TODO Notifications */ }
             )
             Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
-            IconButton(onClick = { /* TODO Notifications */ }) {
-                Icon(imageVector = Icons.Default.Notifications, contentDescription = "Notifications")
-            }
-            // ✨ فعال شدن کلیک رو چرخ‌دنده برای رفتن به صفحه تنظیمات
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
-            }
+            TopBarIconButton(
+                icon = Icons.Default.Settings,
+                contentDescription = "Settings",
+                onClick = onNavigateToSettings
+            )
+            Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        )
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun TopBarIconButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        modifier = Modifier.size(38.dp)
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -281,66 +329,105 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = HipkaTheme.dimens.spaceM, vertical = HipkaTheme.dimens.spaceS)
+            .aspectRatio(1.5f)
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(HipkaTheme.dimens.cornerL),
+                clip = false
+            )
             .clip(RoundedCornerShape(HipkaTheme.dimens.cornerL))
             .clickable(onClick = onClick)
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.secondaryContainer,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+    ) {
+        AsyncImage(
+            model = song.coverImageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.05f),
+                            Color.Black.copy(alpha = 0.15f),
+                            Color.Black.copy(alpha = 0.80f)
+                        ),
+                        startY = 0f
                     )
                 )
-            )
-            .padding(HipkaTheme.dimens.spaceM)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = song.coverImageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(HipkaTheme.dimens.cornerM))
-            )
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
 
-            Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceM))
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = Color.White.copy(alpha = 0.20f),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(HipkaTheme.dimens.spaceM)
+        ) {
+            Text(
+                text = stringResource(id = R.string.home_featured_today),
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+            )
+        }
 
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(HipkaTheme.dimens.spaceM),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(id = R.string.home_featured_today),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                )
-                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceXS))
-                Text(
                     text = song.title,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceXS))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = song.artistName,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                    color = Color.White.copy(alpha = 0.85f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
+            Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
+
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(52.dp)
+                    .shadow(elevation = 4.dp, shape = CircleShape)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onPrimary),
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(26.dp)
                 )
             }
         }
@@ -385,23 +472,24 @@ private fun QuickActionItem(icon: ImageVector, label: String, onClick: () -> Uni
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Surface(
-            shape = RoundedCornerShape(HipkaTheme.dimens.cornerM),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(64.dp)
+            shape = RoundedCornerShape(HipkaTheme.dimens.cornerL),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            shadowElevation = 2.dp,
+            modifier = Modifier.size(60.dp)
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
-        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceXS))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
             color = MaterialTheme.colorScheme.onBackground
         )
     }
@@ -423,7 +511,7 @@ private fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
         )
         Text(
             text = stringResource(id = R.string.home_see_all),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable(onClick = onSeeAllClick)
         )
@@ -454,49 +542,62 @@ private fun SongHorizontalList(
 private fun SquareSongCard(
     song: Song,
     onClick: () -> Unit,
-    onLikeClick: () -> Unit
+    onLikeClick: (Song) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .width(140.dp)
-            .clickable(onClick = onClick)
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(148.dp),
+        shape = RoundedCornerShape(HipkaTheme.dimens.cornerM),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        AsyncImage(
-            model = song.coverImageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(HipkaTheme.dimens.cornerM))
-        )
-        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = song.artistName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+        Column(modifier = Modifier.padding(HipkaTheme.dimens.spaceXS)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
+            ) {
+                AsyncImage(
+                    model = song.coverImageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
+            Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = song.title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(1.dp))
+                    Text(
+                        text = song.artistName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
-            IconButton(onClick = onLikeClick, modifier = Modifier.size(24.dp)) {
-                Icon(
-                    imageVector = if (song.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Toggle Like",
-                    tint = if (song.isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                IconButton(onClick = { onLikeClick(song) }, modifier = Modifier.size(22.dp)) {
+                    Icon(
+                        imageVector = if (song.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "Toggle Like",
+                        tint = if (song.isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
@@ -516,38 +617,48 @@ private fun PlaylistHorizontalList(playlists: List<Playlist>, onClick: (Playlist
 
 @Composable
 private fun WidePlaylistCard(playlist: Playlist, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .width(220.dp)
-            .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
-            .clickable(onClick = onClick)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(HipkaTheme.dimens.spaceS),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(232.dp),
+        shape = RoundedCornerShape(HipkaTheme.dimens.cornerM),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        AsyncImage(
-            model = playlist.coverImageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(60.dp)
-                .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
-        )
-        Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceM))
-        Column {
-            Text(
-                text = playlist.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "Playlist • ${playlist.category.name}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+        Row(
+            modifier = Modifier.padding(HipkaTheme.dimens.spaceS),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
+            ) {
+                AsyncImage(
+                    model = playlist.coverImageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceM))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = playlist.title,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "پلی‌لیست • ${playlist.category.name}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

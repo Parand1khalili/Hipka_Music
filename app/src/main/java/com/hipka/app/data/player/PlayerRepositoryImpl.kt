@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -224,8 +225,15 @@ private fun Song.toMediaItem(): MediaItem {
         .setArtworkUri(Uri.parse(coverImageUrl))
         .build()
 
+    // پخش هوشمند: اگر فایل آفلاین آهنگ دانلود شده باشد، به جای مصرف اینترنت
+    // مستقیماً از روی فایل لوکال پخش می‌شود
+    val playbackUri = localFilePath
+        ?.takeIf { isDownloaded && File(it).exists() }
+        ?.let { Uri.fromFile(File(it)) }
+        ?: Uri.parse(audioUrl)
+
     return MediaItem.Builder()
-        .setUri(audioUrl)
+        .setUri(playbackUri)
         .setMediaId(id)
         .setMediaMetadata(metadata)
         .build()

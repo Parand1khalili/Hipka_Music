@@ -14,22 +14,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.hipka.app.R
+import com.hipka.app.core.util.formatPlayCount
 import com.hipka.app.domain.model.Artist
 import com.hipka.app.presentation.theme.HipkaTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopArtistsScreen(
-    onBackClick: () -> Unit, // علامت دونقطه اصلاح شد
+    onBackClick: () -> Unit,
+    onArtistClick: (Artist) -> Unit,
     viewModel: TopArtistsViewModel = hiltViewModel()
-) { // عبارت Composable اضافه از اینجا حذف شد
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -67,10 +72,14 @@ fun TopArtistsScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(HipkaTheme.dimens.spaceM),
-                        verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceM)
+                        verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
                     ) {
                         itemsIndexed(uiState.artists) { index, artist ->
-                            ArtistRowItem(rank = index + 1, artist = artist)
+                            ArtistRowItem(
+                                rank = index + 1,
+                                artist = artist,
+                                onArtistClick = onArtistClick
+                            )
                         }
                     }
                 }
@@ -80,41 +89,64 @@ fun TopArtistsScreen(
 }
 
 @Composable
-fun ArtistRowItem(rank: Int, artist: Artist) {
-    Row(
+fun ArtistRowItem(
+    rank: Int,
+    artist: Artist,
+    onArtistClick: (Artist) -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = HipkaTheme.dimens.spaceXS),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onArtistClick(artist) }
     ) {
-        Text(
-            text = "$rank",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(32.dp)
-        )
-
-        AsyncImage(
-            model = artist.imageUrl,
-            contentDescription = artist.name,
-            contentScale = ContentScale.Crop,
+        Row(
             modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-        )
-
-        Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceM))
-
-        Column(modifier = Modifier.weight(1f)) {
+                .fillMaxWidth()
+                .padding(HipkaTheme.dimens.spaceS),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // ۱. شماره رتبه (۱، ۲، ۳ ...)
             Text(
-                text = artist.name,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                text = "$rank",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(36.dp)
             )
-            Text(
-                text = "${artist.totalPlayCount} " + stringResource(id = R.string.play_count_suffix),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+            Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceXS))
+
+            // ۲. عکس پروفایل دایره‌ای هنرمند
+            AsyncImage(
+                model = artist.imageUrl,
+                contentDescription = artist.name,
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.ic_logo_fa),
+                error = painterResource(id = R.drawable.ic_logo_fa),
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
             )
+
+            Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceM))
+
+            // ۳. نام هنرمند و تعداد پخش فرمت‌شده
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = artist.name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${artist.totalPlayCount.formatPlayCount()} " + stringResource(id = R.string.play_count_suffix),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

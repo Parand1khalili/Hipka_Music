@@ -6,7 +6,7 @@
     <string name="nav_home">خانه</string>
     <string name="nav_search">جستجو</string>
     <string name="nav_downloads">دانلودها</string>
-    <string name="nav_playlists">پلی\u200cلیست\u200cها</string>
+    <string name="nav_playlists">پلی‌لیست‌ها</string>
     <string name="nav_profile">پروفایل</string>
 
     <!-- Settings screen -->
@@ -23,7 +23,7 @@
     <!-- Generic states -->
     <string name="error_generic">مشکلی پیش آمد. دوباره تلاش کنید.</string>
     <string name="error_no_internet">اتصال اینترنت برقرار نیست.</string>
-    <string name="empty_state_no_results">نتیجه\u200cای یافت نشد.</string>
+    <string name="empty_state_no_results">نتیجه‌ای یافت نشد.</string>
     <string name="loading">در حال بارگذاری…</string>
 
     <!-- Player -->
@@ -46,7 +46,7 @@
     <string name="search_filter_artists">خواننده‌ها</string>
     <string name="search_recent_searches">جستجوهای اخیر</string>
     <string name="search_type_to_search">برای جستجوی موسیقی دلخواه خود تایپ کنید</string>
-    <string name="search_no_results_for">نتیجه‌ای برای \"%1$s\" یافت نشد</string>
+    <string name="search_no_results_for">نتیجه‌ای برای "%1$s" یافت نشد</string>
 
     <!-- Home Screen UI -->
     <string name="home_quick_liked">لایک شده</string>
@@ -113,4 +113,37 @@
     <string name="premium_processing">در حال پردازش…</string>
     <string name="premium_active_desc">اشتراک ویژه شما فعال است. می‌توانید آهنگ‌ها را دانلود کرده و آفلاین گوش دهید!</string>
     <string name="premium_free_desc">برای دانلود آهنگ‌ها و پخش آفلاین، حساب خود را به ویژه ارتقاء دهید.</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">دانلودها</string>
+    <string name="no_downloads">آهنگ دانلود شده‌ای ندارید</string>
+    <string name="no_downloads_desc">آهنگ‌هایی که دانلود می‌کنید اینجا نمایش داده می‌شوند و بدون اینترنت پخش می‌شوند.</string>
+    <string name="downloads_sort_by_title">عنوان</string>
+    <string name="downloads_sort_by_artist">خواننده</string>
+    <string name="downloads_delete_cd">حذف دانلود</string>
+    <string name="downloads_count">%1$d آهنگ دانلود شده</string>
+    <string name="download_cd">دانلود برای پخش آفلاین</string>
+    <string name="downloaded_cd">دانلود شده</string>
+    <string name="download_premium_required">دانلود آفلاین ویژه کاربران Premium است. برای دانلود آهنگ‌ها حساب خود را ارتقاء دهید.</string>
+    <string name="download_started">دانلود شروع شد…</string>
+    <string name="download_notification_channel">دانلودها</string>
+    <string name="download_notification_title">در حال دانلود</string>
+    <string name="download_complete">دانلود کامل شد</string>
+    <string name="download_failed">دانلود ناموفق بود</string>
+
+    <!-- Auth Screen Strings -->
+    <string name="auth_welcome_back">خوش آمدید</string>
+    <string name="auth_create_account">ساخت حساب جدید</string>
+    <string name="auth_full_name">نام و نام خانوادگی</string>
+    <string name="auth_email">ایمیل</string>
+    <string name="auth_password">رمز عبور</string>
+    <string name="auth_login_button">ورود</string>
+    <string name="auth_register_button">ثبت‌نام</string>
+    <string name="auth_no_account">حساب کاربری ندارید؟ </string>
+    <string name="auth_already_have_account">قبلاً ثبت‌نام کرده‌اید؟ </string>
+    <string name="auth_sign_up_link">ثبت‌نام کنید</string>
+    <string name="auth_sign_in_link">وارد شوید</string>
+    <string name="auth_error_fill_fields">لطفاً تمامی فیلدها را پر کنید</string>
+    <string name="auth_error_enter_name">لطفاً نام خود را وارد کنید</string>
+    <string name="auth_error_invalid_credentials">ایمیل یا رمز عبور اشتباه است</string>
 </resources>

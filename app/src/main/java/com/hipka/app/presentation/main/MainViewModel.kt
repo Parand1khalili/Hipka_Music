@@ -3,6 +3,7 @@ package com.hipka.app.presentation.main
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hipka.app.core.locale.LocaleManager
+import com.hipka.app.data.local.datastore.SessionManager
 import com.hipka.app.data.local.datastore.SettingsDataStore
 import com.hipka.app.data.local.datastore.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +18,7 @@ import javax.inject.Inject
 data class MainUiState(
     val languageCode: String = LocaleManager.LANGUAGE_ENGLISH,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val isLoggedIn: Boolean = false,
     val isLoading: Boolean = true
 )
 
@@ -27,7 +29,8 @@ sealed interface MainIntent {
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val settingsDataStore: SettingsDataStore
+    private val settingsDataStore: SettingsDataStore,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())

@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ArtistDto(
+    @SerialName("artist_id") val id: String? = null,
     @SerialName("artist_name") val artistName: String,
     @SerialName("total_play_count") val totalPlayCount: Int,
     @SerialName("artist_image_url") val artistImageUrl: String? = null

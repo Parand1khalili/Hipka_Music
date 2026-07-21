@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -25,9 +24,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.hipka.app.R
+import com.hipka.app.presentation.features.auth.AuthScreen
 import com.hipka.app.presentation.features.chat.ChatScreen
 import com.hipka.app.presentation.features.followedusers.FollowedUsersScreen
 import com.hipka.app.presentation.features.home.HomeIntent
@@ -44,6 +45,7 @@ import com.hipka.app.presentation.features.recent.RecentSongsScreen
 import com.hipka.app.presentation.features.search.SearchScreen
 import com.hipka.app.presentation.features.see_all.SeeAllScreen
 import com.hipka.app.presentation.features.settings.SettingsScreen
+import com.hipka.app.presentation.features.topartists.TopArtistsScreen
 import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.main.SongInteractionViewModel
@@ -57,7 +59,6 @@ fun HipkaNavGraph(
 ) {
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
-
     val songInteractionViewModel: SongInteractionViewModel = hiltViewModel()
     val likedSongIds by songInteractionViewModel.likedSongIds.collectAsStateWithLifecycle()
 
@@ -68,30 +69,47 @@ fun HipkaNavGraph(
         }
     }
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            Column {
-                playerUiState.currentSong?.let { song ->
-                    MiniPlayerBar(
-                        song = song,
-                        isPlaying = playerUiState.isPlaying,
-                        onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
-                        onClick = { navController.navigate(Screen.NowPlaying.route) },
-                        modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
-                    )
+            // مخفی کردن منوی پایین در صفحه ورود / ثبت نام
+            if (currentRoute != Screen.Auth.route) {
+                Column {
+                    playerUiState.currentSong?.let { song ->
+                        MiniPlayerBar(
+                            song = song,
+                            isPlaying = playerUiState.isPlaying,
+                            onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
+                            onClick = { navController.navigate(Screen.NowPlaying.route) },
+                            modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
+                        )
+                    }
+                    HipkaBottomBar(navController)
                 }
-                HipkaBottomBar(navController)
             }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = if (mainUiState.isLoggedIn) Screen.Home.route else Screen.Auth.route,
             modifier = Modifier
                 .padding(innerPadding)
-                .consumeWindowInsets(innerPadding) // ✨ این خط مانع ایجاد فاصله خالی بالای کیبورد می‌شود
+                .consumeWindowInsets(innerPadding)
         ) {
+            // --- صفحه ورود / ثبت نام ---
+            composable(Screen.Auth.route) {
+                AuthScreen(
+                    onAuthSuccess = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Auth.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             // --- Bottom nav destinations --------------------------------
             composable(Screen.Home.route) {
                 val homeViewModel: HomeViewModel = hiltViewModel()
@@ -135,8 +153,9 @@ fun HipkaNavGraph(
             }
 
             composable(Screen.TopArtists.route) {
-                com.hipka.app.presentation.features.topartists.TopArtistsScreen(
-                    onBackClick = { navController.popBackStack() }
+                TopArtistsScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onArtistClick = { /* TODO */ }
                 )
             }
 
