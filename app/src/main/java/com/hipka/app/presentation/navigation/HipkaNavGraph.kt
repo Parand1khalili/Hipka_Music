@@ -2,7 +2,6 @@ package com.hipka.app.presentation.navigation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,13 +23,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.hipka.app.R
+import com.hipka.app.presentation.features.auth.AuthScreen
 import com.hipka.app.presentation.features.home.HomeIntent
 import com.hipka.app.presentation.features.home.HomeScreen
 import com.hipka.app.presentation.features.home.HomeViewModel
-import com.hipka.app.presentation.features.home.SeeAllScreen
 import com.hipka.app.presentation.features.player.MiniPlayerBar
 import com.hipka.app.presentation.features.player.PlayerIntent
 import com.hipka.app.presentation.features.player.PlayerScreen
@@ -49,8 +49,6 @@ import com.hipka.app.presentation.main.MainUiState
 import com.hipka.app.presentation.theme.HipkaTheme
 import androidx.compose.material3.MaterialTheme
 import com.hipka.app.presentation.features.see_all.SeeAllScreen
-import com.hipka.app.domain.model.Artist
-
 
 @Composable
 fun HipkaNavGraph(
@@ -60,7 +58,6 @@ fun HipkaNavGraph(
 ) {
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
-
     val songInteractionViewModel: SongInteractionViewModel = hiltViewModel()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -88,40 +85,55 @@ fun HipkaNavGraph(
         }
     }
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            Column {
-                playerUiState.currentSong?.let { song ->
-                    MiniPlayerBar(
-                        song = song,
-                        isPlaying = playerUiState.isPlaying,
-                        onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
-                        onClick = { navController.navigate(Screen.NowPlaying.route) },
-                        modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
-                    )
+            // مخفی کردن منوی پایین در صفحه ورود
+            if (currentRoute != Screen.Auth.route) {
+                Column {
+                    playerUiState.currentSong?.let { song ->
+                        MiniPlayerBar(
+                            song = song,
+                            isPlaying = playerUiState.isPlaying,
+                            onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
+                            onClick = { navController.navigate(Screen.NowPlaying.route) },
+                            modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
+                        )
+                    }
+                    HipkaBottomBar(navController)
                 }
-                HipkaBottomBar(navController)
             }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = if (mainUiState.isLoggedIn) Screen.Home.route else Screen.Auth.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // --- صفحه ورود / ثبت نام ---
+            composable(Screen.Auth.route) {
+                AuthScreen(
+                    onAuthSuccess = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Auth.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             // --- Bottom nav destinations --------------------------------
             composable(Screen.Home.route) {
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-                val context = androidx.compose.ui.platform.LocalContext.current
 
                 HomeScreen(
                     uiState = homeUiState,
                     likedSongIds = likedSongIds,
                     onSongClick = { song ->
                         songInteractionViewModel.addToRecentlyPlayed(song)
-                        // صف پخش را از هر لیستی که آهنگ در آن است می‌سازیم تا Next/Crossfade معنا داشته باشد
                         val queue = listOf(homeUiState.popularSongs, homeUiState.newReleases, homeUiState.carouselSongs)
                             .firstOrNull { list -> list.any { it.id == song.id } }
                             ?: listOf(song)
@@ -141,7 +153,8 @@ fun HipkaNavGraph(
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                            "artists" -> navController.navigate(Screen.TopArtists.route)                        }
+                            "artists" -> navController.navigate(Screen.TopArtists.route)
+                        }
                     },
                     onSeeAllClick = { section ->
                         navController.navigate("see_all/$section")
@@ -154,15 +167,14 @@ fun HipkaNavGraph(
                         }
                     }
                 )
-
             }
+
             composable(Screen.TopArtists.route) {
                 com.hipka.app.presentation.features.topartists.TopArtistsScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             }
 
-            //  بخش جدید و کامل شده برای اتصال بدون ارور به سیستم لایک و پخش موزیک پلیر Hipka
             composable(
                 route = "see_all/{section}",
                 arguments = listOf(navArgument("section") { type = NavType.StringType })
@@ -171,10 +183,9 @@ fun HipkaNavGraph(
 
                 SeeAllScreen(
                     sectionName = section,
-                    likedSongIds = likedSongIds, //  اتصال مستقیم به ست لایک‌های زنده پروژه
+                    likedSongIds = likedSongIds,
                     onBackClick = { navController.popBackStack() },
                     onSongClick = { song ->
-                        // ⚡ اضافه کردن به لیست شنیده‌شده‌های اخیر و پخش مستقیم در مینی‌پلیر
                         songInteractionViewModel.addToRecentlyPlayed(song)
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
                     },
@@ -194,7 +205,6 @@ fun HipkaNavGraph(
                     onLikeClick = { song ->
                         songInteractionViewModel.toggleLike(song)
                     },
-                    // ✨ اتصال هاب سرچ به صفحه کشف عمومی کاربران (پیدا کردن دوستان)
                     onNavigateToDiscoverUsers = {
                         navController.navigate("followed_users/discover")
                     }
@@ -212,9 +222,7 @@ fun HipkaNavGraph(
 
             composable(Screen.Playlists.route) {
                 PlaylistsScreen(
-                    onPlaylistClick = { playlistId ->
-                        // نویگیشن به صفحه جزئیات پلی‌لیست در اسپرینت ۳ در صورت نیاز
-                    }
+                    onPlaylistClick = { playlistId -> }
                 )
             }
 
@@ -222,7 +230,6 @@ fun HipkaNavGraph(
                 ProfileScreen(
                     mainUiState = mainUiState,
                     onMainIntent = onMainIntent,
-                    // ✨ اصلاح ناوبری پروفایل: ارسال هوشمند نوع کلیک (فالوور یا فالووینگ) به لایه بعد
                     onNavigateToFollowedUsers = { type ->
                         navController.navigate("followed_users/$type")
                     }
@@ -243,7 +250,6 @@ fun HipkaNavGraph(
             }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }
 
-            // تبدیل به مسیر داینامیک پارامتریک جهت تفکیک کامل لایه نمایش فالوور، فالووینگ و دیسکاور
             composable(
                 route = "followed_users/{type}",
                 arguments = listOf(navArgument("type") { type = NavType.StringType })
@@ -266,7 +272,6 @@ fun HipkaNavGraph(
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
                     },
                     onShuffleAllClick = { songList ->
-                        // اجرای شافل تصادفی روی کل لیست لایک شده‌ها
                         playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
                     },
                     onNavigateBack = { navController.popBackStack() }
@@ -280,12 +285,12 @@ fun HipkaNavGraph(
                         playerViewModel.onIntent(PlayerIntent.PlaySong(song))
                     },
                     onShuffleAllClick = { songList ->
-                        // اجرای شافل تصادفی روی کل لیست آهنگ‌های اخیر شنیده شده
                         playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
                     },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+
             composable(Screen.ChatList.route) { PlaceholderScreen("Chats") }
 
             composable(

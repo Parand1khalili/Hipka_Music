@@ -106,4 +106,20 @@
     <string name="download_notification_title">Downloading</string>
     <string name="download_complete">Download complete</string>
     <string name="download_failed">Download failed</string>
+
+    <!-- Auth Screen Strings -->
+    <string name="auth_welcome_back">Welcome Back</string>
+    <string name="auth_create_account">Create Account</string>
+    <string name="auth_full_name">Full Name</string>
+    <string name="auth_email">Email Address</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_login_button">Sign In</string>
+    <string name="auth_register_button">Sign Up</string>
+    <string name="auth_no_account">Don\'t have an account? </string>
+    <string name="auth_already_have_account">Already have an account? </string>
+    <string name="auth_sign_up_link">Sign Up</string>
+    <string name="auth_sign_in_link">Sign In</string>
+    <string name="auth_error_fill_fields">Please fill in all fields</string>
+    <string name="auth_error_enter_name">Please enter your name</string>
+    <string name="auth_error_invalid_credentials">Invalid email or password</string>
 </resources>
