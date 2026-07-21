@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -27,27 +27,30 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.hipka.app.R
+import com.hipka.app.presentation.features.ArtistDetail.ArtistDetailScreen
 import com.hipka.app.presentation.features.auth.AuthScreen
+import com.hipka.app.presentation.features.chat.ChatScreen
+import com.hipka.app.presentation.features.followedusers.FollowedUsersScreen
 import com.hipka.app.presentation.features.home.HomeIntent
 import com.hipka.app.presentation.features.home.HomeScreen
 import com.hipka.app.presentation.features.home.HomeViewModel
+import com.hipka.app.presentation.features.likedsongs.LikedSongsScreen
 import com.hipka.app.presentation.features.player.MiniPlayerBar
 import com.hipka.app.presentation.features.player.PlayerIntent
 import com.hipka.app.presentation.features.player.PlayerScreen
 import com.hipka.app.presentation.features.player.PlayerViewModel
-import com.hipka.app.presentation.features.search.SearchScreen
 import com.hipka.app.presentation.features.playlists.PlaylistsScreen
 import com.hipka.app.presentation.features.profile.ProfileScreen
-import com.hipka.app.presentation.features.followedusers.FollowedUsersScreen
-import com.hipka.app.presentation.features.chat.ChatScreen
-import com.hipka.app.presentation.features.likedsongs.LikedSongsScreen
 import com.hipka.app.presentation.features.recent.RecentSongsScreen
-import com.hipka.app.presentation.main.SongInteractionViewModel
+import com.hipka.app.presentation.features.search.SearchScreen
+import com.hipka.app.presentation.features.see_all.SeeAllScreen
+import com.hipka.app.presentation.features.topartists.TopArtistsScreen
 import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.main.MainUiState
+import com.hipka.app.presentation.main.SongInteractionViewModel
 import com.hipka.app.presentation.theme.HipkaTheme
-import androidx.compose.material3.MaterialTheme
-import com.hipka.app.presentation.features.see_all.SeeAllScreen
+import java.net.URLDecoder
+import com.hipka.app.domain.model.Artist
 
 @Composable
 fun HipkaNavGraph(
@@ -151,9 +154,43 @@ fun HipkaNavGraph(
                 )
             }
 
+            // --- صفحه هنرمندان برتر همراه با هدایت به پروفایل هنرمند ---
             composable(Screen.TopArtists.route) {
-                com.hipka.app.presentation.features.topartists.TopArtistsScreen(
-                    onBackClick = { navController.popBackStack() }
+                TopArtistsScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onArtistClick = { artist:Artist ->
+                        navController.navigate(Screen.ArtistDetail.createRoute(artist.name, artist.imageUrl))
+                    }
+                )
+            }
+
+            // --- صفحه اختصاصی پروفایل هنرمند ---
+            composable(
+                route = Screen.ArtistDetail.route,
+                arguments = listOf(
+                    navArgument("artistName") { type = NavType.StringType },
+                    navArgument("imageUrl") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val artistName = backStackEntry.arguments?.getString("artistName") ?: ""
+                val rawImageUrl = backStackEntry.arguments?.getString("imageUrl") ?: ""
+                val imageUrl = try { URLDecoder.decode(rawImageUrl, "UTF-8") } catch (e: Exception) { rawImageUrl }
+
+                ArtistDetailScreen(
+                    artistName = artistName,
+                    imageUrl = imageUrl,
+                    likedSongIds = likedSongIds,
+                    onBackClick = { navController.popBackStack() },
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    },
+                    onLikeClick = { song ->
+                        songInteractionViewModel.toggleLike(song)
+                    },
+                    onShuffleClick = { songList ->
+                        playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
+                    }
                 )
             }
 

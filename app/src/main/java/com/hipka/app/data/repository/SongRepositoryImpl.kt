@@ -276,4 +276,24 @@ class SongRepositoryImpl @Inject constructor(
             emit(emptyList())
         }
     }
+
+    override suspend fun getSongsByArtist(artistName: String): List<Song> {
+        return try {
+            val remoteSongs = songApi.getSongsByArtist(artistFilter = "eq.$artistName")
+            remoteSongs.map { dto ->
+                Song(
+                    id = dto.id,
+                    title = dto.title,
+                    artistName = dto.artistName,
+                    coverImageUrl = dto.coverImageUrl,
+                    audioUrl = dto.audioUrl,
+                    playCount = dto.playCount ?: 0,
+                    likesCount = dto.likesCount ?: 0,
+                    releaseDate = dto.releaseDate ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }

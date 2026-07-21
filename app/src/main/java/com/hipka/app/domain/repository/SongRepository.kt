@@ -18,6 +18,6 @@ interface SongRepository {
     suspend fun saveSearchQuery(query: String)
     suspend fun deleteSearchQuery(query: String)
     suspend fun clearAllSearchHistory()
-
     fun getTopArtists(): Flow<List<Artist>>
+    suspend fun getSongsByArtist(artistName: String): List<Song>
 }

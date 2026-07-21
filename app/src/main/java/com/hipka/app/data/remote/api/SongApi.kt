@@ -38,4 +38,10 @@ interface SongApi {
     @GET("rest/v1/top_artists?select=*")
     suspend fun getTopArtists(): List<ArtistDto>
 
+    @GET("rest/v1/songs")
+    suspend fun getSongsByArtist(
+        @Query("artist_name") artistFilter: String,
+        @Query("select") select: String = "*"
+    ): List<SongDto>
+
 }
