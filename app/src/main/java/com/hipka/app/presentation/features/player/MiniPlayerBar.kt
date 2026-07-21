@@ -1,5 +1,6 @@
 package com.hipka.app.presentation.features.player
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,12 +34,14 @@ fun MiniPlayerBar(
     song: Song,
     isPlaying: Boolean,
     onTogglePlayPause: () -> Unit,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(HipkaTheme.dimens.miniPlayerHeight),
+            .height(HipkaTheme.dimens.miniPlayerHeight)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(HipkaTheme.dimens.cornerM),
         tonalElevation = HipkaTheme.dimens.spaceXS,
         color = MaterialTheme.colorScheme.surfaceVariant
