@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
@@ -36,8 +37,13 @@ object PlayerModule {
 
     @Provides
     @Singleton
-    fun provideCacheDataSourceFactory(cache: SimpleCache): CacheDataSource.Factory {
-        val upstreamFactory = DefaultHttpDataSource.Factory()
+    fun provideCacheDataSourceFactory(
+        @ApplicationContext context: Context,
+        cache: SimpleCache
+    ): CacheDataSource.Factory {
+        // DefaultDataSource هم file:// (آهنگ‌های دانلودشده) و هم http(s):// (استریم) را پشتیبانی می‌کند.
+        // اگر مستقیم از DefaultHttpDataSource استفاده شود، پخش فایل لوکال با خطای Source شکست می‌خورد.
+        val upstreamFactory = DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory())
         return CacheDataSource.Factory()
             .setCache(cache)
             .setUpstreamDataSourceFactory(upstreamFactory)

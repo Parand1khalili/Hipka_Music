@@ -40,6 +40,7 @@ import com.hipka.app.presentation.features.playlists.PlaylistsScreen
 import com.hipka.app.presentation.features.profile.ProfileScreen
 import com.hipka.app.presentation.features.followedusers.FollowedUsersScreen
 import com.hipka.app.presentation.features.chat.ChatScreen
+import com.hipka.app.presentation.features.downloads.DownloadsScreen
 import com.hipka.app.presentation.features.likedsongs.LikedSongsScreen
 import com.hipka.app.presentation.features.recent.RecentSongsScreen
 import com.hipka.app.presentation.main.SongInteractionViewModel
@@ -66,6 +67,23 @@ fun HipkaNavGraph(
         }
     }
     val likedSongIds by songInteractionViewModel.likedSongIds.collectAsStateWithLifecycle()
+    val downloadedSongIds by songInteractionViewModel.downloadedSongIds.collectAsStateWithLifecycle()
+
+    // کاربر عادی روی دکمه دانلود زده — طبق مستندات باید پیام نیاز به ارتقاء حساب ببیند
+    val premiumRequiredMessage = stringResource(id = R.string.download_premium_required)
+    LaunchedEffect(songInteractionViewModel) {
+        songInteractionViewModel.premiumRequired.collect {
+            snackbarHostState.showSnackbar(premiumRequiredMessage)
+        }
+    }
+
+    // بازخورد فوری هنگام شروع دانلود (نوتیفیکیشن پیشرفت هم توسط ورکر نمایش داده می‌شود)
+    val downloadStartedMessage = stringResource(id = R.string.download_started)
+    LaunchedEffect(songInteractionViewModel) {
+        songInteractionViewModel.downloadStarted.collect {
+            snackbarHostState.showSnackbar(downloadStartedMessage)
+        }
+    }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -193,7 +211,14 @@ fun HipkaNavGraph(
                 )
             }
 
-            composable(Screen.Downloads.route) { PlaceholderScreen("Downloads") }
+            composable(Screen.Downloads.route) {
+                DownloadsScreen(
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    }
+                )
+            }
 
             composable(Screen.Playlists.route) {
                 PlaylistsScreen(
@@ -216,7 +241,11 @@ fun HipkaNavGraph(
                 PlayerScreen(
                     uiState = playerUiState,
                     onIntent = { playerViewModel.onIntent(it) },
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    isDownloaded = playerUiState.currentSong?.id in downloadedSongIds,
+                    onDownloadClick = {
+                        playerUiState.currentSong?.let { songInteractionViewModel.downloadSong(it) }
+                    }
                 )
             }
             composable(Screen.Settings.route) { PlaceholderScreen("Settings") }

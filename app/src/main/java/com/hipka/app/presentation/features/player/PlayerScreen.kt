@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -67,6 +69,8 @@ fun PlayerScreen(
     uiState: PlayerUiState,
     onIntent: (PlayerIntent) -> Unit,
     onBackClick: () -> Unit,
+    isDownloaded: Boolean = false,
+    onDownloadClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -126,6 +130,8 @@ fun PlayerScreen(
                 song = song,
                 uiState = uiState,
                 onIntent = onIntent,
+                isDownloaded = isDownloaded,
+                onDownloadClick = onDownloadClick,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -140,6 +146,8 @@ private fun NowPlayingContent(
     song: Song,
     uiState: PlayerUiState,
     onIntent: (PlayerIntent) -> Unit,
+    isDownloaded: Boolean,
+    onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -246,9 +254,40 @@ private fun NowPlayingContent(
 
         Box(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
 
-        PlaybackSpeedButton(
-            currentSpeed = uiState.playbackSpeed,
-            onSpeedChange = { onIntent(PlayerIntent.SetPlaybackSpeed(it)) }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
+        ) {
+            PlaybackSpeedButton(
+                currentSpeed = uiState.playbackSpeed,
+                onSpeedChange = { onIntent(PlayerIntent.SetPlaybackSpeed(it)) }
+            )
+
+            DownloadButton(
+                isDownloaded = isDownloaded,
+                onClick = onDownloadClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun DownloadButton(
+    isDownloaded: Boolean,
+    onClick: () -> Unit
+) {
+    // برای کاربر عادی هم دکمه دیده می‌شود اما با کلیک، پیام نیاز به ارتقاء حساب نمایش داده می‌شود
+    IconButton(onClick = onClick, enabled = !isDownloaded) {
+        Icon(
+            imageVector = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Filled.Download,
+            contentDescription = stringResource(
+                id = if (isDownloaded) R.string.downloaded_cd else R.string.download_cd
+            ),
+            tint = if (isDownloaded) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
     }
 }

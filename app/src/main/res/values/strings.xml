@@ -90,6 +90,23 @@
     <string name="no_users_found">No users found</string>
     <string name="play_count_suffix">plays</string>
 
+    <!-- Downloads -->
+    <string name="downloads_title">Downloads</string>
+    <string name="no_downloads">No Downloaded Songs</string>
+    <string name="no_downloads_desc">Songs you download will appear here and play without an internet connection.</string>
+    <string name="downloads_sort_by_title">Title</string>
+    <string name="downloads_sort_by_artist">Artist</string>
+    <string name="downloads_delete_cd">Delete download</string>
+    <string name="downloads_count">%1$d downloaded</string>
+    <string name="download_cd">Download for offline</string>
+    <string name="downloaded_cd">Downloaded</string>
+    <string name="download_premium_required">Offline download is a Premium feature. Upgrade your account to download songs.</string>
+    <string name="download_started">Download started…</string>
+    <string name="download_notification_channel">Downloads</string>
+    <string name="download_notification_title">Downloading</string>
+    <string name="download_complete">Download complete</string>
+    <string name="download_failed">Download failed</string>
+
     <!-- Auth Screen Strings -->
     <string name="auth_welcome_back">Welcome Back</string>
     <string name="auth_create_account">Create Account</string>

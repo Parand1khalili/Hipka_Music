@@ -86,6 +86,23 @@
     <string name="no_users_found">کاربری یافت نشد</string>
     <string name="play_count_suffix">پخش</string>
 
+    <!-- Downloads -->
+    <string name="downloads_title">دانلودها</string>
+    <string name="no_downloads">آهنگ دانلود شده‌ای ندارید</string>
+    <string name="no_downloads_desc">آهنگ‌هایی که دانلود می‌کنید اینجا نمایش داده می‌شوند و بدون اینترنت پخش می‌شوند.</string>
+    <string name="downloads_sort_by_title">عنوان</string>
+    <string name="downloads_sort_by_artist">خواننده</string>
+    <string name="downloads_delete_cd">حذف دانلود</string>
+    <string name="downloads_count">%1$d آهنگ دانلود شده</string>
+    <string name="download_cd">دانلود برای پخش آفلاین</string>
+    <string name="downloaded_cd">دانلود شده</string>
+    <string name="download_premium_required">دانلود آفلاین ویژه کاربران Premium است. برای دانلود آهنگ‌ها حساب خود را ارتقاء دهید.</string>
+    <string name="download_started">دانلود شروع شد…</string>
+    <string name="download_notification_channel">دانلودها</string>
+    <string name="download_notification_title">در حال دانلود</string>
+    <string name="download_complete">دانلود کامل شد</string>
+    <string name="download_failed">دانلود ناموفق بود</string>
+
     <!-- Auth Screen Strings -->
     <string name="auth_welcome_back">خوش آمدید</string>
     <string name="auth_create_account">ساخت حساب جدید</string>
