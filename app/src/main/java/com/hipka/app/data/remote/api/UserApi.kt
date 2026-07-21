@@ -7,6 +7,7 @@ import retrofit2.http.Query
 import retrofit2.http.POST
 import retrofit2.http.DELETE
 import retrofit2.http.Body
+import retrofit2.http.Headers
 
 interface UserApi {
 
@@ -31,27 +32,40 @@ interface UserApi {
         @Query("select") select: String = "*"
     ): List<UserDto>
 
-    // ✨ واکشی روابط فالووینگ (کسانی که این کاربر فالو کرده است)
+    //  متد لاگین کاربر با ایمیل و رمز عبور
+    @GET("rest/v1/users")
+    suspend fun loginUser(
+        @Query("email") emailFilter: String,
+        @Query("password") passwordFilter: String,
+        @Query("select") select: String = "*"
+    ): List<UserDto>
+
+    //  متد ایجاد اکانت جدید (ثبت نام)
+
+    @Headers("Prefer: return=representation")
+    @POST("rest/v1/users")
+    suspend fun registerUser(
+        @Body user: UserDto
+    ): List<UserDto>
+
     @GET("rest/v1/user_follows")
     suspend fun getFollowings(
-        @Query("follower_id") followerFilter: String, // pass as "eq.<userId>"
+        @Query("follower_id") followerFilter: String,
         @Query("select") select: String = "*"
     ): List<UserFollowDto>
 
-    // ✨ واکشی روابط فالوور (کسانی که این کاربر را فالو کرده‌اند)
     @GET("rest/v1/user_follows")
     suspend fun getFollowers(
-        @Query("following_id") followingFilter: String, // pass as "eq.<userId>"
+        @Query("following_id") followingFilter: String,
         @Query("select") select: String = "*"
     ): List<UserFollowDto>
 
-    // 💡 اضافه کردن به انتهای اینترفیس UserApi
     @POST("rest/v1/user_follows")
     suspend fun followUser(@Body relationship: UserFollowDto)
 
     @DELETE("rest/v1/user_follows")
     suspend fun unfollowUser(
-        @Query("follower_id") followerFilter: String, // "eq.<myId>"
-        @Query("following_id") followingFilter: String // "eq.<targetId>"
+        @Query("follower_id") followerFilter: String,
+        @Query("following_id") followingFilter: String
     )
 }

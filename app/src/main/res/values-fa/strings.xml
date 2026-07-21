@@ -85,4 +85,20 @@
     <string name="no_following_found">در حال حاضر کسی را دنبال نمی‌کنید</string>
     <string name="no_users_found">کاربری یافت نشد</string>
     <string name="play_count_suffix">پخش</string>
+
+    <!-- Auth Screen Strings -->
+    <string name="auth_welcome_back">خوش آمدید</string>
+    <string name="auth_create_account">ساخت حساب جدید</string>
+    <string name="auth_full_name">نام و نام خانوادگی</string>
+    <string name="auth_email">ایمیل</string>
+    <string name="auth_password">رمز عبور</string>
+    <string name="auth_login_button">ورود</string>
+    <string name="auth_register_button">ثبت‌نام</string>
+    <string name="auth_no_account">حساب کاربری ندارید؟ </string>
+    <string name="auth_already_have_account">قبلاً ثبت‌نام کرده‌اید؟ </string>
+    <string name="auth_sign_up_link">ثبت‌نام کنید</string>
+    <string name="auth_sign_in_link">وارد شوید</string>
+    <string name="auth_error_fill_fields">لطفاً تمامی فیلدها را پر کنید</string>
+    <string name="auth_error_enter_name">لطفاً نام خود را وارد کنید</string>
+    <string name="auth_error_invalid_credentials">ایمیل یا رمز عبور اشتباه است</string>
 </resources>

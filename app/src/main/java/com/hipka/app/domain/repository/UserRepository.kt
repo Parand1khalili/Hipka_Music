@@ -1,6 +1,7 @@
 package com.hipka.app.domain.repository
 
 import com.hipka.app.domain.model.User
+import kotlinx.coroutines.flow.Flow
 
 interface UserRepository {
     suspend fun getUserById(id: String): User?
@@ -9,7 +10,13 @@ interface UserRepository {
     suspend fun getFollowingIds(userId: String): List<String>
     suspend fun getFollowerIds(userId: String): List<String>
 
-    // ✨ اضافه شدن متدهای مدیریت رابطه دیتابیس
     suspend fun followUser(followerId: String, followingId: String)
     suspend fun unfollowUser(followerId: String, followingId: String)
+
+    //  متدهای احراز هویت
+    suspend fun login(email: String, password: String): Result<User>
+    suspend fun register(name: String, email: String, password: String): Result<User>
+    suspend fun logout()
+    fun isLoggedIn(): Flow<Boolean>
+    fun getCurrentUserId(): Flow<String?>
 }
