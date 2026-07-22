@@ -34,6 +34,7 @@ class AuthViewModel @Inject constructor(
             is AuthIntent.OnUsernameChanged -> _uiState.update { it.copy(username = intent.username) }
             is AuthIntent.OnEmailChanged -> _uiState.update { it.copy(email = intent.email) }
             is AuthIntent.OnPasswordChanged -> _uiState.update { it.copy(password = intent.password) }
+            is AuthIntent.OnGenderChanged -> _uiState.update { it.copy(gender = intent.gender) }
             AuthIntent.TogglePasswordVisibility -> _uiState.update {
                 it.copy(isPasswordVisible = !it.isPasswordVisible)
             }
@@ -66,6 +67,7 @@ class AuthViewModel @Inject constructor(
                 return
             }
         } else {
+
             // اعتبارسنجی ثبت‌نام
             if (state.name.isBlank()) {
                 val error = if (isPersian) "لطفاً نام و نام خانوادگی خود را وارد کنید" else "Please enter your full name"
@@ -95,7 +97,7 @@ class AuthViewModel @Inject constructor(
             val result = if (state.isLoginMode) {
                 userRepository.login(state.loginIdentifier.trim(), state.password)
             } else {
-                userRepository.register(name = state.name.trim(), username = state.username.trim(), email = state.email.trim(),password = state.password)
+                userRepository.register(name = state.name.trim(), username = state.username.trim(), email = state.email.trim(),password = state.password, gender = state.gender)
             }
 
             result.fold(

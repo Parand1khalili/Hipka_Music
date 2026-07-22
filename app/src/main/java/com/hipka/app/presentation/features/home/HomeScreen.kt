@@ -61,6 +61,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.hipka.app.R
@@ -122,8 +123,7 @@ fun HomeScreen(
                 contentPadding = PaddingValues(bottom = HipkaTheme.dimens.spaceXL)
             ) {
                 // 1. Top App Bar همراه با لوگوی سفارشی و اکشن تنظیمات
-                item { HomeTopBar(onNavigateToSettings = onNavigateToSettings) }
-
+                item { HomeTopBar(currentUser = uiState.currentUser, onNavigateToSettings = onNavigateToSettings) }
                 // نوار اطلاع‌رسانی: محتوای زیر از کش آفلاین می‌آید
                 if (uiState.isShowingCachedData) {
                     item { OfflineBanner() }
@@ -279,9 +279,12 @@ fun HomeScreen(
         }
     }
 }
-
+// کامپوننت TopBar به‌روزرسانی‌شده
 @Composable
-private fun HomeTopBar(onNavigateToSettings: () -> Unit) {
+private fun HomeTopBar(
+    currentUser: com.hipka.app.domain.model.User?,
+    onNavigateToSettings: () -> Unit
+) {
     val isPersian = LocalConfiguration.current.locales[0].language == "fa"
     val logoResId = if (isPersian) R.drawable.ic_logo_fa else R.drawable.ic_logo_en
 
@@ -315,23 +318,44 @@ private fun HomeTopBar(onNavigateToSettings: () -> Unit) {
                 onClick = onNavigateToSettings
             )
             Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary
-                            )
-                        )
-                    )
-            )
+
+            // 👈 جایگزین دایره شرابی قبلی با آواتار واقعی کاربر
+            UserTopBarAvatar(user = currentUser)
         }
     }
 }
 
+// کامپوننت کمکی رندر عکس پروفایل در هدر هوم
+@Composable
+private fun UserTopBarAvatar(user: com.hipka.app.domain.model.User?, size: Dp = 38.dp) {
+    val avatarUrl = user?.avatarUrl?.trim()?.lowercase()
+
+    if (!avatarUrl.isNullOrBlank() && avatarUrl.startsWith("http")) {
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = user?.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+        )
+    } else {
+        val drawableRes = when (avatarUrl) {
+            "avatar_female" -> R.drawable.avatar_female
+            "avatar_male" -> R.drawable.avatar_male
+            else -> R.drawable.avatar_female // در صورت نامشخص بودن، آواتار پیش‌فرض
+        }
+
+        Image(
+            painter = painterResource(id = drawableRes),
+            contentDescription = user?.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+        )
+    }
+}
 @Composable
 private fun TopBarIconButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
     Surface(

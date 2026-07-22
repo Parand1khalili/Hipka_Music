@@ -70,16 +70,17 @@ class UserRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
-    override suspend fun register(name: String, username: String, email: String, password: String): Result<User> {
+    override suspend fun register(name: String, username: String, email: String, password: String, gender: String): Result<User> {
         return try {
             val newUserId = UUID.randomUUID().toString()
+            val defaultAvatarName = if (gender == "female") "avatar_female" else "avatar_male"
             val newDto = UserDto(
                 id = newUserId,
                 name = name.trim(),
                 username = username.trim(),
                 email = email.trim(),
                 password = password,
-                avatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde",
+                avatarUrl = defaultAvatarName,
                 isPremium = false,
                 createdAt = null
             )
