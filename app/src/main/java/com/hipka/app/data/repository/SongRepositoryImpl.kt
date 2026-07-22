@@ -42,7 +42,7 @@ class SongRepositoryImpl @Inject constructor(
      * می‌شود. اگر شبکه شکست بخورد، کش قبلی حفظ می‌شود نه اینکه لیست خالی شود.
      */
     override fun getSongsWithSource(): Flow<SongsResult> = flow {
-        val cached = songDao.getAllCachedSongs().first().map { it.toDomainModel() }
+        val cached = songDao.getAllCachedSongs().first().map { it.toDomainModel() }.deduplicated()
         val isOnline = runCatching { networkMonitor.isOnline.first() }.getOrDefault(true)
 
         if (cached.isNotEmpty()) {
@@ -76,7 +76,7 @@ class SongRepositoryImpl @Inject constructor(
                     likesCount = dto.likesCount ?: 0,
                     releaseDate = dto.releaseDate ?: ""
                 )
-            }
+            }.deduplicated()
 
             // ذخیره برای دفعه بعدی که کاربر آفلاین است
             songDao.cacheSongs(songs.map { it.toEntity() })
@@ -282,6 +282,14 @@ class SongRepositoryImpl @Inject constructor(
             searchHistoryDao.clearAllHistoryForUser(currentUserId)
         }
     }
+
+    /**
+     * دیتای دمو سرور شامل چند ردیف تکراری برای همان آهنگ است (عنوان/خواننده
+     * یکسان، id متفاوت) — این باعث می‌شد مثلاً «Bohemian Rhapsody» دو بار در
+     * هر بخش خانه نمایش داده شود. این متد فقط اولین رخداد هر ترک را نگه می‌دارد.
+     */
+    private fun List<Song>.deduplicated(): List<Song> =
+        distinctBy { "${it.title.trim().lowercase()}|${it.artistName.trim().lowercase()}" }
 
     /** فقط برای کش کاتالوگ؛ وضعیت محلی (لایک/دانلود) در DAO حفظ می‌شود */
     private fun Song.toEntity(): LocalSongEntity = LocalSongEntity(

@@ -59,6 +59,7 @@
     <string name="home_section_local_playlists">پلی‌لیست‌های محلی</string>
     <string name="home_see_all"><![CDATA[مشاهده همه >]]></string>
     <string name="home_featured_today">پیشنهاد ویژه امروز</string>
+    <string name="home_offline_message">آفلاین هستید</string>
 
     <!-- Liked & Recent Songs -->
     <string name="liked_songs_title">آهنگ‌های پسندیده</string>
@@ -132,13 +133,15 @@
     <string name="download_failed">دانلود ناموفق بود</string>
 
     <!-- Offline -->
-    <string name="offline_banner">آفلاین هستید — موسیقی ذخیره‌شده نمایش داده می‌شود</string>
+    <string name="offline_banner">آفلاین هستید — ممکن است برخی امکانات به‌طور کامل در دسترس نباشند</string>
     <string name="offline_no_cache_title">آفلاین هستید</string>
     <string name="offline_no_cache_desc">برای بارگذاری موسیقی به اینترنت وصل شوید. آهنگ‌های دانلودشده همچنان در تب دانلودها در دسترس هستند.</string>
     <string name="offline_search_unavailable">جستجو به اینترنت نیاز دارد.</string>
     <string name="offline_downloads_hint">رفتن به دانلودها</string>
     <string name="downloads_premium_only_title">دانلود ویژه کاربران Premium است</string>
     <string name="downloads_premium_only_desc">برای ذخیره آهنگ‌ها روی دستگاه و گوش دادن بدون اینترنت، حساب خود را به Premium ارتقاء دهید.</string>
+    <string name="playlists_offline_title">پلی‌لیست‌ها به اینترنت نیاز دارند</string>
+    <string name="playlists_offline_desc">پلی‌لیست‌ها به‌صورت آفلاین قابل بارگذاری یا مشاهده نیستند. برای دیدن آن‌ها به اینترنت وصل شوید.</string>
 
     <!-- Auth Screen Strings -->
     <string name="auth_welcome_back">خوش آمدید</string>

@@ -43,12 +43,23 @@ object PlayerModule {
     ): CacheDataSource.Factory {
         // DefaultDataSource هم file:// (آهنگ‌های دانلودشده) و هم http(s):// (استریم) را پشتیبانی می‌کند.
         // اگر مستقیم از DefaultHttpDataSource استفاده شود، پخش فایل لوکال با خطای Source شکست می‌خورد.
-        val upstreamFactory = DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory())
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(15_000)
+        val upstreamFactory = DefaultDataSource.Factory(context, httpFactory)
         return CacheDataSource.Factory()
             .setCache(cache)
             .setUpstreamDataSourceFactory(upstreamFactory)
             .setCacheWriteDataSinkFactory(CacheDataSink.Factory().setCache(cache))
-            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            // FLAG_IGNORE_CACHE_ON_ERROR: اگر خواندن از کش خطا داد، مستقیم از شبکه ادامه بده.
+            // FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS: بعضی پاسخ‌های استریم صدا
+            // بدون Content-Length می‌آیند؛ بدون این پرچم، CacheDataSource روی مرز بخش
+            // کش‌شده/باقیمانده با «Source error» شکست می‌خورد.
+            .setFlags(
+                CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR or
+                    CacheDataSource.FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS
+            )
     }
 
     @Provides

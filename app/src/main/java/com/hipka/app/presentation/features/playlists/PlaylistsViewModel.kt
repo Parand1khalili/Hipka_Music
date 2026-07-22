@@ -2,6 +2,7 @@ package com.hipka.app.presentation.features.playlists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hipka.app.core.network.NetworkMonitor
 import com.hipka.app.data.local.datastore.SessionManager
 import com.hipka.app.domain.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class PlaylistsViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlaylistsUiState())
@@ -34,7 +36,17 @@ class PlaylistsViewModel @Inject constructor(
 
     private fun load() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, isOffline = false) }
+
+            // پلی‌لیست‌ها هیچ کش محلی ندارند (برخلاف آهنگ‌ها)؛ به جای زدن یک
+            // درخواست شبکه‌ای که حتماً شکست می‌خورد و پیام خام نشان می‌دهد،
+            // مستقیماً اعلام می‌کنیم که این بخش بدون اینترنت قابل استفاده نیست.
+            val isOnline = runCatching { networkMonitor.isOnline.first() }.getOrDefault(true)
+            if (!isOnline) {
+                _uiState.update { it.copy(isLoading = false, isOffline = true) }
+                return@launch
+            }
+
             runCatching {
                 val world = playlistRepository.getPlaylistsByCategory("WORLD")
                 val local = playlistRepository.getPlaylistsByCategory("LOCAL")
