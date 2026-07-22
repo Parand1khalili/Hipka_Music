@@ -38,6 +38,8 @@
     <string name="player_sleep_timer_cd">تایمر خواب</string>
     <string name="player_sleep_timer_minutes">%d دقیقه</string>
     <string name="player_sleep_timer_off">خاموش کردن</string>
+    <string name="player_like_cd">پسندیدن</string>
+    <string name="player_unlike_cd">لغو پسندیدن</string>
 
     <!-- Search screen -->
     <string name="search_hint">جستجوی آهنگ یا خواننده...</string>

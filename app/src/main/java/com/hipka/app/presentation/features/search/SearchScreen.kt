@@ -46,7 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
@@ -55,7 +55,7 @@ import com.hipka.app.presentation.theme.HipkaTheme
 @Composable
 fun SearchScreen(
     likedSongIds: Set<String>,
-    onSongClick: (Song) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
     onLikeClick: (Song) -> Unit,
     onNavigateToDiscoverUsers: () -> Unit, // ویژگی کیانا: پارامتر جدید ناوبری برای اتصال به هاب اکتشاف کاربران
     viewModel: SearchViewModel = hiltViewModel()
@@ -208,7 +208,7 @@ fun SearchScreen(
                     items(resultsWithLikeStatus, key = { it.id }) { song ->
                         SearchResultItem(
                             song = song,
-                            onClick = { onSongClick(song) },
+                            onClick = { onSongClick(resultsWithLikeStatus, song) },
                             onLikeClick = { onLikeClick(song) }
                         )
                     }
@@ -267,7 +267,7 @@ private fun SearchResultItem(
             .padding(HipkaTheme.dimens.spaceS),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
+        CoverImage(
             model = song.coverImageUrl,
             contentDescription = null,
             modifier = Modifier

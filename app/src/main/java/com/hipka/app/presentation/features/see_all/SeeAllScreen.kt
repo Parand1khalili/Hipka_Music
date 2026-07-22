@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.R
 import com.hipka.app.core.util.formatPlayCount
 import com.hipka.app.domain.model.Song
@@ -31,7 +31,7 @@ fun SeeAllScreen(
     sectionName: String, // برای هماهنگی با متد فراخوانی قبلی شما نگه داشته شده است
     likedSongIds: Set<String>, // گرفتن وضعیت ست لایک‌ها به صورت لایو از اکتیویتی یا نویگیشن گراف مانند هوم اسکرین
     onBackClick: () -> Unit,
-    onSongClick: (Song) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
     onLikeClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SeeAllViewModel = hiltViewModel()
@@ -121,7 +121,7 @@ fun SeeAllScreen(
 
                             SeeAllSongListItem(
                                 song = currentSong,
-                                onClick = { onSongClick(currentSong) },
+                                onClick = { onSongClick(state.songs, currentSong) },
                                 onLikeClick = { onLikeClick(currentSong) }
                             )
                         }
@@ -147,10 +147,9 @@ private fun SeeAllSongListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // کاور آهنگ (ابعاد از تم اختصاصی شما خوانده می‌شود: albumCoverS که برابر 48.dp است)
-        AsyncImage(
+        CoverImage(
             model = song.coverImageUrl,
             contentDescription = null,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(HipkaTheme.dimens.albumCoverS)
                 .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))

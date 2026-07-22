@@ -38,6 +38,8 @@
     <string name="player_sleep_timer_cd">Sleep timer</string>
     <string name="player_sleep_timer_minutes">%d min</string>
     <string name="player_sleep_timer_off">Turn off</string>
+    <string name="player_like_cd">Like</string>
+    <string name="player_unlike_cd">Unlike</string>
 
     <!-- Search screen -->
     <string name="search_hint">Search songs or artists...</string>

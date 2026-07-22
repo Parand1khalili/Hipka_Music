@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,9 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import coil.compose.AsyncImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Song
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.presentation.theme.HipkaTheme
 
 @Composable
@@ -34,6 +36,8 @@ fun MiniPlayerBar(
     song: Song,
     isPlaying: Boolean,
     onTogglePlayPause: () -> Unit,
+    onSkipNext: () -> Unit = {},
+    onSkipPrevious: () -> Unit = {},
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -52,7 +56,7 @@ fun MiniPlayerBar(
                 .padding(horizontal = HipkaTheme.dimens.spaceM),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
+            CoverImage(
                 model = song.coverImageUrl,
                 contentDescription = null,
                 modifier = Modifier
@@ -78,12 +82,26 @@ fun MiniPlayerBar(
                 )
             }
 
+            IconButton(onClick = onSkipPrevious) {
+                Icon(
+                    imageVector = Icons.Filled.SkipPrevious,
+                    contentDescription = stringResource(id = R.string.player_skip_previous_cd)
+                )
+            }
+
             IconButton(onClick = onTogglePlayPause) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = stringResource(
                         id = if (isPlaying) R.string.player_pause_cd else R.string.player_play_cd
                     )
+                )
+            }
+
+            IconButton(onClick = onSkipNext) {
+                Icon(
+                    imageVector = Icons.Filled.SkipNext,
+                    contentDescription = stringResource(id = R.string.player_skip_next_cd)
                 )
             }
         }

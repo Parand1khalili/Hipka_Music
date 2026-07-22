@@ -52,14 +52,11 @@ object PlayerModule {
             .setCache(cache)
             .setUpstreamDataSourceFactory(upstreamFactory)
             .setCacheWriteDataSinkFactory(CacheDataSink.Factory().setCache(cache))
-            // FLAG_IGNORE_CACHE_ON_ERROR: اگر خواندن از کش خطا داد، مستقیم از شبکه ادامه بده.
-            // FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS: بعضی پاسخ‌های استریم صدا
-            // بدون Content-Length می‌آیند؛ بدون این پرچم، CacheDataSource روی مرز بخش
-            // کش‌شده/باقیمانده با «Source error» شکست می‌خورد.
-            .setFlags(
-                CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR or
-                    CacheDataSource.FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS
-            )
+            // اگر خواندن/نوشتن در کش خطا داد، مستقیم از شبکه ادامه بده به‌جای شکست کامل پخش.
+            // توجه: پرچم FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS عمداً ست نشده — باعث
+            // می‌شد آهنگ‌هایی که همین الان آنلاین پخش شده بودند، اصلاً در کش نوشته نشوند و
+            // بعد از قطع اینترنت غیرقابل پخش شوند.
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
     @Provides

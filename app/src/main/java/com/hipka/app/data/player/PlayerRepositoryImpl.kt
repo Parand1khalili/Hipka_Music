@@ -38,6 +38,11 @@ private const val CROSSFADE_DURATION_MS = 3000L
 private const val CROSSFADE_TICK_MS = 200L
 private const val SLEEP_TIMER_TICK_MS = 1000L
 
+// خطاهای IO شبکه (کد ۲۰۰۰-۲۹۹۹) اغلب موقتی‌اند (قطعی لحظه‌ای شبکه/CDN)؛ قبل از
+// نمایش خطا به کاربر چند بار با تأخیر دوباره تلاش می‌کنیم
+private const val MAX_IO_ERROR_RETRIES = 2
+private const val RETRY_BACKOFF_MS = 800L
+
 @Singleton
 class PlayerRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
@@ -71,17 +76,54 @@ class PlayerRepositoryImpl @Inject constructor(
     private val _playbackSpeed = MutableStateFlow(1f)
     override val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
+    // شمارنده تلاش مجدد برای هر آیتم پخش، جدا نگه داشته می‌شود تا آهنگ بعدی از صفر شروع کند
+    private var ioRetryCount = 0
+    private var ioRetryMediaId: String? = null
+
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
+            if (isPlaying) {
+                // پخش موفق از سر گرفته شد؛ شمارنده تلاش مجدد را ریست کن
+                ioRetryCount = 0
+                ioRetryMediaId = null
+            }
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             _currentSong.value = mediaItem?.mediaId?.let { queuedSongsById[it] }
+            ioRetryCount = 0
+            ioRetryMediaId = null
         }
 
         override fun onPlayerError(error: PlaybackException) {
             _isPlaying.value = false
+
+            val currentMediaId = mediaController?.currentMediaItem?.mediaId
+            // همه‌ی کدهای خطای دسته IO بین ۲۰۰۰ تا ۲۹۹۹ هستند (شبکه، HTTP، محدوده کش و ...)
+            val isIoError = error.errorCode in 2000..2999
+
+            if (isIoError && currentMediaId != null) {
+                if (ioRetryMediaId != currentMediaId) {
+                    ioRetryMediaId = currentMediaId
+                    ioRetryCount = 0
+                }
+
+                if (ioRetryCount < MAX_IO_ERROR_RETRIES) {
+                    ioRetryCount++
+                    repositoryScope.launch {
+                        delay(RETRY_BACKOFF_MS * ioRetryCount)
+                        // prepare() دوباره از موقعیت فعلی لود می‌کند؛ خطاهای موقتی شبکه/CDN
+                        // اغلب همین‌جا خودشان را حل می‌کنند بدون اینکه کاربر چیزی ببیند
+                        mediaController?.apply {
+                            prepare()
+                            play()
+                        }
+                    }
+                    return
+                }
+            }
+
             _playbackErrors.tryEmit(error.message ?: "Playback failed")
         }
     }

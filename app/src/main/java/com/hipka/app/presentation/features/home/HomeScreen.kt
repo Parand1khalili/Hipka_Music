@@ -62,10 +62,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Playlist
 import com.hipka.app.domain.model.Song
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.presentation.common.OfflineBanner
 import com.hipka.app.presentation.common.OfflineEmptyState
 import com.hipka.app.presentation.theme.HipkaTheme
@@ -364,10 +364,9 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
             .clip(RoundedCornerShape(HipkaTheme.dimens.cornerL))
             .clickable(onClick = onClick)
     ) {
-        AsyncImage(
+        CoverImage(
             model = song.coverImageUrl,
             contentDescription = null,
-            contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -637,10 +636,9 @@ private fun SquareSongCard(
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
             ) {
-                AsyncImage(
+                CoverImage(
                     model = song.coverImageUrl,
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -714,10 +712,9 @@ private fun WidePlaylistCard(playlist: Playlist, onClick: () -> Unit) {
                     .size(56.dp)
                     .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
             ) {
-                AsyncImage(
+                CoverImage(
                     model = playlist.coverImageUrl,
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
