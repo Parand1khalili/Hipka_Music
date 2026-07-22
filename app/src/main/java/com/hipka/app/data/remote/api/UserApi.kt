@@ -35,10 +35,18 @@ interface UserApi {
         @Query("select") select: String = "*"
     ): List<UserDto>
 
-    // متدهای لاگین و ثبت‌نام (اضافه‌شده توسط هم‌گروهی)
+    // متدهای قبلی لاگین برای حفظ سازگاری با کد بقیه اعضای تیم
     @GET("rest/v1/users")
     suspend fun loginUser(
         @Query("email") emailFilter: String,
+        @Query("password") passwordFilter: String,
+        @Query("select") select: String = "*"
+    ): List<UserDto>
+
+    // متد جدید اختصاصی جهت ورود با ایمیل یا نام کاربری
+    @GET("rest/v1/users")
+    suspend fun loginUserOr(
+        @Query("or") orFilter: String, // pass as "(email.eq.xyz,name.eq.xyz)"
         @Query("password") passwordFilter: String,
         @Query("select") select: String = "*"
     ): List<UserDto>
@@ -70,7 +78,6 @@ interface UserApi {
         @Query("following_id") followingFilter: String // "eq.<targetId>"
     )
 
-    // متد تغییر وضعیت پریمیوم (اضافه‌شده توسط شما)
     @PATCH("rest/v1/users")
     suspend fun updatePremiumStatus(
         @Query("id") idFilter: String, // pass as "eq.<id>"

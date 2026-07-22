@@ -18,7 +18,12 @@ interface UserRepository {
 
     // متدهای احراز هویت
     suspend fun login(email: String, password: String): Result<User>
-    suspend fun register(name: String, email: String, password: String): Result<User>
+    suspend fun register(
+        name: String,
+        username: String = "",
+        email: String,
+        password: String
+    ): Result<User>
     suspend fun logout()
     fun isLoggedIn(): Flow<Boolean>
     fun getCurrentUserId(): Flow<String?>

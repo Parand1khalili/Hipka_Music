@@ -4,9 +4,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -30,15 +33,19 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hipka.app.R
+import com.hipka.app.core.locale.LocaleManager
+import com.hipka.app.presentation.main.MainIntent
 import com.hipka.app.presentation.theme.HipkaTheme
 
 @Composable
 fun AuthScreen(
+    onMainIntent: (MainIntent) -> Unit,
     onAuthSuccess: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isPersian = LocalConfiguration.current.locales[0].language == "fa"
+    val currentLang = LocalConfiguration.current.locales[0].language
+    val isPersian = currentLang == "fa"
     val logoResId = if (isPersian) R.drawable.ic_logo_fa else R.drawable.ic_logo_en
 
     LaunchedEffect(uiState.isSuccess) {
@@ -47,20 +54,47 @@ fun AuthScreen(
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
     ) {
-        Column(
+        // ۱. نوار انتخاب زبان (بدون همپوشانی و کاملاً کلیک‌پذیر)
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(HipkaTheme.dimens.spaceL),
+                .padding(horizontal = HipkaTheme.dimens.spaceM, vertical = HipkaTheme.dimens.spaceS),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilterChip(
+                selected = !isPersian,
+                onClick = { onMainIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_ENGLISH)) },
+                label = { Text("English") },
+                shape = RoundedCornerShape(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            FilterChip(
+                selected = isPersian,
+                onClick = { onMainIntent(MainIntent.ChangeLanguage(LocaleManager.LANGUAGE_PERSIAN)) },
+                label = { Text("فارسی") },
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
+
+        // ۲. فرم اصلی با قابلیت اسکرول
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = HipkaTheme.dimens.spaceL)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Logo
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // لوگوی برنامه
             Image(
                 painter = painterResource(id = logoResId),
                 contentDescription = stringResource(id = R.string.app_name),
@@ -82,41 +116,66 @@ fun AuthScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
+            Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
 
-            // Full Name Field (Registration Mode Only)
-            if (!uiState.isLoginMode) {
+            if (uiState.isLoginMode) {
+                // فیلد ورود: ایمیل یا نام کاربری *
                 OutlinedTextField(
-                    value = uiState.name,
-                    onValueChange = { viewModel.onIntent(AuthIntent.OnNameChanged(it)) },
-                    label = { Text(text = stringResource(id = R.string.auth_full_name)) },
+                    value = uiState.loginIdentifier,
+                    onValueChange = { viewModel.onIntent(AuthIntent.OnLoginIdentifierChanged(it)) },
+                    label = { RequiredLabel(text = stringResource(id = R.string.auth_username_or_email)) },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
                 )
-                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
-            }
+            } else {
+                // فیلد ثبت‌نام ۱: نام و نام خانوادگی *
+                OutlinedTextField(
+                    value = uiState.name,
+                    onValueChange = { viewModel.onIntent(AuthIntent.OnNameChanged(it)) },
+                    label = { RequiredLabel(text = stringResource(id = R.string.auth_full_name)) },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
+                )
 
-            // Email Field
-            OutlinedTextField(
-                value = uiState.email,
-                onValueChange = { viewModel.onIntent(AuthIntent.OnEmailChanged(it)) },
-                label = { Text(text = stringResource(id = R.string.auth_email)) },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
-            )
+                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+
+                // فیلد ثبت‌نام ۲: نام کاربری *
+                OutlinedTextField(
+                    value = uiState.username,
+                    onValueChange = { viewModel.onIntent(AuthIntent.OnUsernameChanged(it)) },
+                    label = { RequiredLabel(text = stringResource(id = R.string.auth_username)) },
+                    leadingIcon = { Icon(Icons.Default.AccountBox, contentDescription = null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
+                )
+
+                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+
+                // فیلد ثبت‌نام ۳: ایمیل *
+                OutlinedTextField(
+                    value = uiState.email,
+                    onValueChange = { viewModel.onIntent(AuthIntent.OnEmailChanged(it)) },
+                    label = { RequiredLabel(text = stringResource(id = R.string.auth_email)) },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
+                )
+            }
 
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
 
-            // Password Field
+            // فیلد رمز عبور *
             OutlinedTextField(
                 value = uiState.password,
                 onValueChange = { viewModel.onIntent(AuthIntent.OnPasswordChanged(it)) },
-                label = { Text(text = stringResource(id = R.string.auth_password)) },
+                label = { RequiredLabel(text = stringResource(id = R.string.auth_password)) },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { viewModel.onIntent(AuthIntent.TogglePasswordVisibility) }) {
@@ -133,23 +192,30 @@ fun AuthScreen(
                 shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
             )
 
-            // Error Message Display
+            // نمایش پیام‌های خطا
             val displayedError = when {
                 uiState.isOfflineError -> stringResource(id = R.string.error_no_internet)
                 else -> uiState.errorMessage
             }
             displayedError?.let { error ->
                 Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(HipkaTheme.dimens.cornerS),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(HipkaTheme.dimens.spaceS)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
 
-            // Main Action Button (Sign In / Sign Up)
+            // دکمه اصلی عملیات (ورود / ثبت‌نام)
             Button(
                 onClick = { viewModel.onIntent(AuthIntent.Submit) },
                 modifier = Modifier
@@ -177,7 +243,7 @@ fun AuthScreen(
 
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
 
-            // Toggle Between Sign In and Sign Up Modes
+            // دکمه تغییر حالت بین ورود و ثبت‌نام
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
@@ -202,6 +268,17 @@ fun AuthScreen(
                     modifier = Modifier.clickable { viewModel.onIntent(AuthIntent.ToggleAuthMode) }
                 )
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+@Composable
+private fun RequiredLabel(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = text)
+        Spacer(modifier = Modifier.width(2.dp))
+        Text(text = "*", color = MaterialTheme.colorScheme.error)
     }
 }
