@@ -30,6 +30,7 @@ import androidx.navigation.navArgument
 import com.hipka.app.R
 import com.hipka.app.presentation.features.auth.AuthScreen
 import com.hipka.app.presentation.features.chat.ChatScreen
+import com.hipka.app.presentation.features.downloads.DownloadsScreen
 import com.hipka.app.presentation.features.followedusers.FollowedUsersScreen
 import com.hipka.app.presentation.features.home.HomeIntent
 import com.hipka.app.presentation.features.home.HomeScreen
@@ -148,7 +149,14 @@ fun HipkaNavGraph(
                             restoreState = true
                         }
                     },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    onGoToDownloads = {
+                        navController.navigate(Screen.Downloads.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
 
@@ -188,7 +196,14 @@ fun HipkaNavGraph(
                 )
             }
 
-            composable(Screen.Downloads.route) { PlaceholderScreen("Downloads") }
+            composable(Screen.Downloads.route) {
+                DownloadsScreen(
+                    onSongClick = { song ->
+                        songInteractionViewModel.addToRecentlyPlayed(song)
+                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
+                    }
+                )
+            }
 
             composable(Screen.Playlists.route) {
                 PlaylistsScreen(

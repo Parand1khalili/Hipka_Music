@@ -2,7 +2,9 @@ package com.hipka.app.presentation.features.downloads
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hipka.app.data.local.datastore.SessionManager
 import com.hipka.app.domain.repository.DownloadRepository
+import com.hipka.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,13 +18,16 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DownloadsViewModel @Inject constructor(
-    private val downloadRepository: DownloadRepository
+    private val downloadRepository: DownloadRepository,
+    private val userRepository: UserRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DownloadsState())
     val state: StateFlow<DownloadsState> = _state.asStateFlow()
 
     init {
+        // لیست دانلودها از Room می‌آید، پس در حالت آفلاین هم کار می‌کند
         downloadRepository.getDownloadedSongs()
             .onEach { songs ->
                 _state.update {
@@ -33,6 +38,19 @@ class DownloadsViewModel @Inject constructor(
                 _state.update { it.copy(isLoading = false, error = exception.message) }
             }
             .launchIn(viewModelScope)
+
+        observePremiumStatus()
+    }
+
+    private fun observePremiumStatus() {
+        viewModelScope.launch {
+            sessionManager.currentUserId.collect { userId ->
+                val premium = userId
+                    ?.let { runCatching { userRepository.getUserById(it)?.isPremium }.getOrNull() }
+                    ?: false
+                _state.update { it.copy(isPremium = premium) }
+            }
+        }
     }
 
     fun onIntent(intent: DownloadsIntent) {

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,7 +23,7 @@ class AuthViewModel @Inject constructor(
     fun onIntent(intent: AuthIntent) {
         when (intent) {
             AuthIntent.ToggleAuthMode -> _uiState.update {
-                it.copy(isLoginMode = !it.isLoginMode, errorMessage = null)
+                it.copy(isLoginMode = !it.isLoginMode, errorMessage = null, isOfflineError = false)
             }
             is AuthIntent.OnNameChanged -> _uiState.update { it.copy(name = intent.name) }
             is AuthIntent.OnEmailChanged -> _uiState.update { it.copy(email = intent.email) }
@@ -31,7 +32,7 @@ class AuthViewModel @Inject constructor(
                 it.copy(isPasswordVisible = !it.isPasswordVisible)
             }
             AuthIntent.Submit -> submitAuth()
-            AuthIntent.ClearError -> _uiState.update { it.copy(errorMessage = null) }
+            AuthIntent.ClearError -> _uiState.update { it.copy(errorMessage = null, isOfflineError = false) }
         }
     }
 
@@ -47,7 +48,7 @@ class AuthViewModel @Inject constructor(
             return
         }
 
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, isOfflineError = false) }
 
         viewModelScope.launch {
             val result = if (currentState.isLoginMode) {
@@ -61,8 +62,16 @@ class AuthViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 },
                 onFailure = { error ->
+                    // خطای شبکه (مثل UnknownHostException) نباید به صورت پیام خام
+                    // «Unable to resolve host» به کاربر نشان داده شود
+                    val isNetworkError = error is IOException
+
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = error.message ?: "An unexpected error occurred")
+                        it.copy(
+                            isLoading = false,
+                            isOfflineError = isNetworkError,
+                            errorMessage = if (isNetworkError) null else (error.message ?: "An unexpected error occurred")
+                        )
                     }
                 }
             )

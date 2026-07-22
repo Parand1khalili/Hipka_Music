@@ -134,7 +134,11 @@ fun AuthScreen(
             )
 
             // Error Message Display
-            uiState.errorMessage?.let { error ->
+            val displayedError = when {
+                uiState.isOfflineError -> stringResource(id = R.string.error_no_internet)
+                else -> uiState.errorMessage
+            }
+            displayedError?.let { error ->
                 Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
                 Text(
                     text = error,

@@ -9,7 +9,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hipka.app.data.local.datastore.ThemeMode
@@ -41,10 +46,21 @@ class MainActivity : AppCompatActivity() {
             }
 
             HipkaTheme(darkTheme = darkTheme) {
-                HipkaNavGraph(
-                    mainUiState = uiState,
-                    onMainIntent = viewModel::onIntent
-                )
+                // startDestination گراف فقط یک بار ارزیابی می‌شود؛ اگر قبل از خوانده
+                // شدن نشست ذخیره‌شده رندر شود، کاربرِ لاگین‌کرده هم به صفحه ورود می‌رود.
+                if (uiState.isSessionChecked) {
+                    HipkaNavGraph(
+                        mainUiState = uiState,
+                        onMainIntent = viewModel::onIntent
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
             }
         }
     }

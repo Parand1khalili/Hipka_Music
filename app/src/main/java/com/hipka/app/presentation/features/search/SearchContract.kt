@@ -15,6 +15,8 @@ data class SearchUiState(
     val selectedFilter: SearchFilter = SearchFilter.ALL,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    /** جستجو به سرور نیاز دارد؛ در حالت آفلاین باید پیام مناسب نشان داده شود */
+    val isOffline: Boolean = false,
     val hasSearchedBefore: Boolean = false
 )
 
