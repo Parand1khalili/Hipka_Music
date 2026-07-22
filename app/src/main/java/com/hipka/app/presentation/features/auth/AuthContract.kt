@@ -8,6 +8,8 @@ data class AuthUiState(
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    /** ورود به خاطر نبود اینترنت شکست خورد — پیام آن از strings.xml خوانده می‌شود */
+    val isOfflineError: Boolean = false,
     val isSuccess: Boolean = false
 )
 

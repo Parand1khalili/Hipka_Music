@@ -59,6 +59,7 @@
     <string name="home_section_local_playlists">Local Playlists</string>
     <string name="home_see_all">See all ></string>
     <string name="home_featured_today">FEATURED TODAY</string>
+    <string name="home_offline_message">You\'re offline</string>
 
     <!-- Liked & Recent Songs -->
     <string name="liked_songs_title">Liked Songs</string>
@@ -130,6 +131,17 @@
     <string name="download_notification_title">Downloading</string>
     <string name="download_complete">Download complete</string>
     <string name="download_failed">Download failed</string>
+
+    <!-- Offline -->
+    <string name="offline_banner">You\'re offline — some features may not be fully accessible</string>
+    <string name="offline_no_cache_title">You\'re offline</string>
+    <string name="offline_no_cache_desc">Connect to the internet to load music. Downloaded songs are still available in the Downloads tab.</string>
+    <string name="offline_search_unavailable">Search needs an internet connection.</string>
+    <string name="offline_downloads_hint">Go to Downloads</string>
+    <string name="downloads_premium_only_title">Downloads are a Premium feature</string>
+    <string name="downloads_premium_only_desc">Upgrade to Premium to save songs on your device and listen without an internet connection.</string>
+    <string name="playlists_offline_title">Playlists need internet</string>
+    <string name="playlists_offline_desc">Playlists can\'t be loaded or browsed offline. Connect to the internet to see them.</string>
 
     <!-- Auth Screen Strings -->
     <string name="auth_welcome_back">Welcome Back</string>

@@ -28,6 +28,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Notifications
@@ -65,6 +66,8 @@ import coil.compose.AsyncImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Playlist
 import com.hipka.app.domain.model.Song
+import com.hipka.app.presentation.common.OfflineBanner
+import com.hipka.app.presentation.common.OfflineEmptyState
 import com.hipka.app.presentation.theme.HipkaTheme
 import kotlinx.coroutines.delay
 
@@ -80,6 +83,7 @@ fun HomeScreen(
     onLikeClick: (Song) -> Unit,
     onPlaylistClick: (String) -> Unit,
     onNavigateToSettings: () -> Unit, // ✨ اضافه شدن اتصال به تنظیمات
+    onGoToDownloads: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { onRefresh() }
@@ -94,6 +98,13 @@ fun HomeScreen(
             Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = uiState.errorMessage, color = MaterialTheme.colorScheme.error)
             }
+        }
+        // آفلاین و بدون کش: به جای «نتیجه‌ای یافت نشد» پیام درست آفلاین را نشان می‌دهیم
+        uiState.isOfflineWithNoCache -> {
+            OfflineEmptyState(
+                onGoToDownloads = onGoToDownloads,
+                modifier = modifier
+            )
         }
         uiState.carouselSongs.isEmpty() && uiState.popularSongs.isEmpty() && uiState.newReleases.isEmpty() -> {
             Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -113,10 +124,17 @@ fun HomeScreen(
                 // 1. Top App Bar همراه با لوگوی سفارشی و اکشن تنظیمات
                 item { HomeTopBar(onNavigateToSettings = onNavigateToSettings) }
 
+                // نوار اطلاع‌رسانی: محتوای زیر از کش آفلاین می‌آید
+                if (uiState.isShowingCachedData) {
+                    item { OfflineBanner() }
+                }
+
                 item { Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS)) }
 
-                // 2. Featured Carousel Pager
-                if (uiState.carouselSongs.isNotEmpty()) {
+                // 2. Featured Carousel Pager — آفلاین: به‌جای آهنگ، یک جای‌خالی با پیام آفلاین نمایش داده می‌شود
+                if (uiState.isShowingCachedData) {
+                    item { FeaturedOfflinePlaceholder() }
+                } else if (uiState.carouselSongs.isNotEmpty()) {
                     item {
                         val pagerState = rememberPagerState(pageCount = { uiState.carouselSongs.size })
                         val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
@@ -153,26 +171,28 @@ fun HomeScreen(
                                 )
                             }
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = HipkaTheme.dimens.spaceS, bottom = HipkaTheme.dimens.spaceXS),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                repeat(uiState.carouselSongs.size) { index ->
-                                    val selected = pagerState.currentPage == index
-                                    val color = if (selected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
+                            if (uiState.carouselSongs.size > 1) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = HipkaTheme.dimens.spaceS, bottom = HipkaTheme.dimens.spaceXS),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    repeat(uiState.carouselSongs.size) { index ->
+                                        val selected = pagerState.currentPage == index
+                                        val color = if (selected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(horizontal = 3.dp)
+                                                .clip(CircleShape)
+                                                .background(color)
+                                                .size(width = if (selected) 18.dp else 6.dp, height = 6.dp)
+                                        )
                                     }
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(horizontal = 3.dp)
-                                            .clip(CircleShape)
-                                            .background(color)
-                                            .size(width = if (selected) 18.dp else 6.dp, height = 6.dp)
-                                    )
                                 }
                             }
                         }
@@ -184,69 +204,75 @@ fun HomeScreen(
                     QuickActionsRow(onActionClick = onQuickActionClick)
                 }
 
-                // 4. Popular Songs
-                if (uiState.popularSongs.isNotEmpty()) {
-                    item {
-                        SectionHeader(
-                            title = stringResource(id = R.string.home_section_popular),
-                            onSeeAllClick = { onSeeAllClick("popular") }
-                        )
+                // آفلاین: بخش‌های Popular/New Releases/پلی‌لیست‌ها نیازمند اینترنت‌اند؛
+                // به‌جایشان فقط پیام آفلاین و اکشن‌های سریع بالا نمایش داده می‌شوند
+                if (uiState.isShowingCachedData) {
+                    item { HomeOfflineMessage() }
+                } else {
+                    // 4. Popular Songs
+                    if (uiState.popularSongs.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = stringResource(id = R.string.home_section_popular),
+                                onSeeAllClick = { onSeeAllClick("popular") }
+                            )
+                        }
+                        item {
+                            SongHorizontalList(
+                                songs = uiState.popularSongs.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
+                                onSongClick = onSongClick,
+                                onLikeClick = onLikeClick
+                            )
+                        }
                     }
-                    item {
-                        SongHorizontalList(
-                            songs = uiState.popularSongs.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
-                            onSongClick = onSongClick,
-                            onLikeClick = onLikeClick
-                        )
-                    }
-                }
 
-                // 5. New Releases
-                if (uiState.newReleases.isNotEmpty()) {
-                    item {
-                        SectionHeader(
-                            title = stringResource(id = R.string.home_section_new_releases),
-                            onSeeAllClick = { onSeeAllClick("new_releases") }
-                        )
+                    // 5. New Releases
+                    if (uiState.newReleases.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = stringResource(id = R.string.home_section_new_releases),
+                                onSeeAllClick = { onSeeAllClick("new_releases") }
+                            )
+                        }
+                        item {
+                            SongHorizontalList(
+                                songs = uiState.newReleases.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
+                                onSongClick = onSongClick,
+                                onLikeClick = onLikeClick
+                            )
+                        }
                     }
-                    item {
-                        SongHorizontalList(
-                            songs = uiState.newReleases.map { it.copy(isLiked = likedSongIds.contains(it.id)) },
-                            onSongClick = onSongClick,
-                            onLikeClick = onLikeClick
-                        )
-                    }
-                }
 
-                // 6. Global Playlists
-                if (uiState.globalPlaylists.isNotEmpty()) {
-                    item {
-                        SectionHeader(
-                            title = stringResource(id = R.string.home_section_global_playlists),
-                            onSeeAllClick = { onSeeAllClick("global_playlists") }
-                        )
+                    // 6. Global Playlists
+                    if (uiState.globalPlaylists.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = stringResource(id = R.string.home_section_global_playlists),
+                                onSeeAllClick = { onSeeAllClick("global_playlists") }
+                            )
+                        }
+                        item {
+                            PlaylistHorizontalList(
+                                playlists = uiState.globalPlaylists,
+                                onClick = { playlist -> onPlaylistClick(playlist.id) }
+                            )
+                        }
                     }
-                    item {
-                        PlaylistHorizontalList(
-                            playlists = uiState.globalPlaylists,
-                            onClick = { playlist -> onPlaylistClick(playlist.id) }
-                        )
-                    }
-                }
 
-                // 7. Local Playlists
-                if (uiState.localPlaylists.isNotEmpty()) {
-                    item {
-                        SectionHeader(
-                            title = stringResource(id = R.string.home_section_local_playlists),
-                            onSeeAllClick = { onSeeAllClick("local_playlists") }
-                        )
-                    }
-                    item {
-                        PlaylistHorizontalList(
-                            playlists = uiState.localPlaylists,
-                            onClick = { playlist -> onPlaylistClick(playlist.id) }
-                        )
+                    // 7. Local Playlists
+                    if (uiState.localPlaylists.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = stringResource(id = R.string.home_section_local_playlists),
+                                onSeeAllClick = { onSeeAllClick("local_playlists") }
+                            )
+                        }
+                        item {
+                            PlaylistHorizontalList(
+                                playlists = uiState.localPlaylists,
+                                onClick = { playlist -> onPlaylistClick(playlist.id) }
+                            )
+                        }
                     }
                 }
             }
@@ -430,6 +456,59 @@ private fun FeaturedBanner(song: Song, onClick: () -> Unit, modifier: Modifier =
                     modifier = Modifier.size(26.dp)
                 )
             }
+        }
+    }
+}
+
+/** جایگزین کارت Featured Today وقتی آفلاین هستیم — بدون آهنگ، فقط پیام آفلاین */
+@Composable
+private fun FeaturedOfflinePlaceholder() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = HipkaTheme.dimens.spaceL, vertical = HipkaTheme.dimens.spaceXS)
+            .aspectRatio(1.5f)
+            .clip(RoundedCornerShape(HipkaTheme.dimens.cornerL))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.CloudOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceXS))
+            Text(
+                text = stringResource(id = R.string.home_offline_message),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** جایگزین بخش‌های Popular/New Releases/پلی‌لیست‌ها وقتی آفلاین هستیم */
+@Composable
+private fun HomeOfflineMessage() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(HipkaTheme.dimens.spaceL),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.CloudOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceXS))
+            Text(
+                text = stringResource(id = R.string.home_offline_message),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -10,6 +10,10 @@ data class HomeUiState(
     val globalPlaylists: List<Playlist> = emptyList(),
     val localPlaylists: List<Playlist> = emptyList(),
     val isLoading: Boolean = true,
+    /** آفلاین هستیم و محتوای نمایش‌داده‌شده از کش محلی می‌آید */
+    val isShowingCachedData: Boolean = false,
+    /** آفلاین هستیم و هیچ چیزی هم در کش نیست */
+    val isOfflineWithNoCache: Boolean = false,
     val errorMessage: String? = null
 )
 

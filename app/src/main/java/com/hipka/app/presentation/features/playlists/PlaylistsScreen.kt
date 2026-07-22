@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack // ایمپورت جدید برای دکمه بازگشت
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -75,6 +76,8 @@ fun PlaylistsScreen(
         ) {
             when {
                 uiState.isLoading -> PlaylistsGridShimmer()
+
+                uiState.isOffline -> PlaylistsOfflineState()
 
                 uiState.errorMessage != null -> Box(
                     modifier = Modifier.fillMaxSize().padding(HipkaTheme.dimens.spaceM),
@@ -239,6 +242,35 @@ private fun PlaylistsGridShimmer() {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun PlaylistsOfflineState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(HipkaTheme.dimens.spaceL),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.CloudOff,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(HipkaTheme.dimens.albumCoverS)
+        )
+        Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
+        Text(
+            text = stringResource(id = R.string.playlists_offline_title),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(HipkaTheme.dimens.spaceXS))
+        Text(
+            text = stringResource(id = R.string.playlists_offline_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

@@ -5,7 +5,9 @@ import com.hipka.app.data.local.dao.SongDao
 import com.hipka.app.data.local.entity.LocalSongEntity
 import com.hipka.app.data.local.entity.RecentSongEntity
 import com.hipka.app.data.remote.api.SongApi
+import com.hipka.app.domain.model.DataSourceState
 import com.hipka.app.domain.model.Song
+import com.hipka.app.domain.model.SongsResult
 import com.hipka.app.domain.repository.SongRepository
 import com.hipka.app.data.local.dao.SearchHistoryDao
 import com.hipka.app.data.local.entity.SearchHistoryEntity
@@ -31,7 +33,36 @@ class SongRepositoryImpl @Inject constructor(
     private val sessionManager: SessionManager
 ) : SongRepository {
 
-    override fun getSongs(): Flow<List<Song>> = flow {
+    override fun getSongs(): Flow<List<Song>> =
+        getSongsWithSource().map { it.songs }
+
+    /**
+     * استراتژی cache-first: اول کش محلی نمایش داده می‌شود تا در حالت آفلاین هم
+     * چیزی برای دیدن باشد، بعد اگر اینترنت بود کاتالوگ تازه گرفته و در Room ذخیره
+     * می‌شود. اگر شبکه شکست بخورد، کش قبلی حفظ می‌شود نه اینکه لیست خالی شود.
+     */
+    override fun getSongsWithSource(): Flow<SongsResult> = flow {
+        val cached = songDao.getAllCachedSongs().first().map { it.toDomainModel() }.deduplicated()
+        val isOnline = runCatching { networkMonitor.isOnline.first() }.getOrDefault(true)
+
+        if (cached.isNotEmpty()) {
+            // وقتی آنلاین هستیم، کش فقط یک نمایش سریع اولیه است و نباید بنر آفلاین
+            // را روشن کند؛ فقط در حالت آفلاین حالت CACHED گزارش می‌شود.
+            emit(
+                SongsResult(
+                    songs = cached,
+                    sourceState = if (isOnline) DataSourceState.CACHED_WHILE_LOADING else DataSourceState.CACHED
+                )
+            )
+        }
+
+        if (!isOnline) {
+            if (cached.isEmpty()) {
+                emit(SongsResult(emptyList(), DataSourceState.UNAVAILABLE))
+            }
+            return@flow
+        }
+
         try {
             val remoteSongs = songApi.testGetSongs()
             val songs = remoteSongs.map { dto ->
@@ -45,11 +76,19 @@ class SongRepositoryImpl @Inject constructor(
                     likesCount = dto.likesCount ?: 0,
                     releaseDate = dto.releaseDate ?: ""
                 )
-            }
-            emit(songs)
+            }.deduplicated()
+
+            // ذخیره برای دفعه بعدی که کاربر آفلاین است
+            songDao.cacheSongs(songs.map { it.toEntity() })
+            emit(SongsResult(songs, DataSourceState.FRESH))
         } catch (e: Exception) {
-            android.util.Log.e("REPO_ERROR", "Network failed. Emitting empty list. Cause: ${e.message}")
-            emit(emptyList())
+            android.util.Log.e("REPO_ERROR", "Network failed, serving cache. Cause: ${e.message}")
+            emit(
+                SongsResult(
+                    songs = cached,
+                    sourceState = if (cached.isEmpty()) DataSourceState.UNAVAILABLE else DataSourceState.CACHED
+                )
+            )
         }
     }
 
@@ -243,6 +282,29 @@ class SongRepositoryImpl @Inject constructor(
             searchHistoryDao.clearAllHistoryForUser(currentUserId)
         }
     }
+
+    /**
+     * دیتای دمو سرور شامل چند ردیف تکراری برای همان آهنگ است (عنوان/خواننده
+     * یکسان، id متفاوت) — این باعث می‌شد مثلاً «Bohemian Rhapsody» دو بار در
+     * هر بخش خانه نمایش داده شود. این متد فقط اولین رخداد هر ترک را نگه می‌دارد.
+     */
+    private fun List<Song>.deduplicated(): List<Song> =
+        distinctBy { "${it.title.trim().lowercase()}|${it.artistName.trim().lowercase()}" }
+
+    /** فقط برای کش کاتالوگ؛ وضعیت محلی (لایک/دانلود) در DAO حفظ می‌شود */
+    private fun Song.toEntity(): LocalSongEntity = LocalSongEntity(
+        id = id,
+        title = title,
+        artistName = artistName,
+        coverImageUrl = coverImageUrl,
+        audioUrl = audioUrl,
+        playCount = playCount,
+        likesCount = likesCount,
+        releaseDate = releaseDate,
+        isLiked = false,
+        isDownloaded = false,
+        localFilePath = null
+    )
 
     private fun LocalSongEntity.toDomainModel(): Song {
         return Song(
