@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -25,7 +23,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -88,37 +85,11 @@ fun ProfileScreen(
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-                uiState.currentUser == null -> DemoUserPicker(
-                    users = uiState.allUsers,
-                    onPick = { viewModel.onIntent(ProfileIntent.SelectDemoUser(it)) }
-                )
                 else -> ProfileContent(
                     uiState = uiState,
                     onNavigateToFollowedUsers = onNavigateToFollowedUsers,
                     onUpgradePremium = { viewModel.onIntent(ProfileIntent.UpgradePremium) },
                     onLogout = { viewModel.onIntent(ProfileIntent.Logout) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DemoUserPicker(users: List<User>, onPick: (String) -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(HipkaTheme.dimens.spaceM)) {
-        Text(
-            text = stringResource(id = R.string.demo_user_picker_title),
-            style = MaterialTheme.typography.titleMedium
-        )
-        Spacer(Modifier.height(HipkaTheme.dimens.spaceM))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)) {
-            items(users, key = { it.id }) { user ->
-                ListItem(
-                    headlineContent = { Text(user.name) },
-                    leadingContent = { UserAvatar(user) },
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.medium)
-                        .clickable { onPick(user.id) }
                 )
             }
         }
@@ -198,12 +169,17 @@ private fun ProfileContent(
             onUpgradeClick = onUpgradePremium
         )
 
-        // اصلاح فاصله منطقی و استاندارد
         Spacer(Modifier.height(HipkaTheme.dimens.spaceL))
 
-        // دکمه سوییچ کاربر دمو / خروج
-        OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(id = R.string.switch_demo_user))
+        // دکمه خروج از حساب کاربری (Log Out)
+        OutlinedButton(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(id = R.string.logout),
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }
@@ -244,7 +220,6 @@ private fun PremiumCard(isPremium: Boolean, isProcessing: Boolean, onUpgradeClic
 private fun UserAvatar(user: User, size: Dp = 40.dp) {
     val avatarUrl = user.avatarUrl
 
-    // ۱. اگر لینک اینترنتی بود از AsyncImage استفاده کن
     if (!avatarUrl.isNullOrBlank() && avatarUrl.startsWith("http")) {
         AsyncImage(
             model = avatarUrl,
@@ -255,11 +230,10 @@ private fun UserAvatar(user: User, size: Dp = 40.dp) {
                 .clip(CircleShape)
         )
     } else {
-        // ۲. اگر نام فایل لوکال بود، عکس مربوطه را از drawable بخوان
         val drawableRes = when (avatarUrl) {
             "avatar_female" -> R.drawable.avatar_female
             "avatar_male" -> R.drawable.avatar_male
-            else -> R.drawable.avatar_male // عکس دیفالت در صورت خالی بودن
+            else -> R.drawable.avatar_male
         }
 
         Image(
