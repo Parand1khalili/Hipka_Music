@@ -43,7 +43,6 @@ class UserRepositoryImpl @Inject constructor(
         )
     }
 
-    // متد تغیر وضعیت پریمیوم
     override suspend fun setPremiumStatus(userId: String, isPremium: Boolean) {
         userApi.updatePremiumStatus(
             idFilter = "eq.$userId",
@@ -51,30 +50,34 @@ class UserRepositoryImpl @Inject constructor(
         )
     }
 
-    // متدهای احراز هویت
-    override suspend fun login(email: String, password: String): Result<User> {
+    // ورود با ایمیل یا نام کاربری
+    override suspend fun login(emailOrUsername: String, password: String): Result<User> {
         return try {
-            val users = userApi.loginUser(emailFilter = "eq.$email", passwordFilter = "eq.$password")
+            val cleanIdentifier = emailOrUsername.trim()
+            val users = userApi.loginUserOr(
+                orFilter = "(email.eq.$cleanIdentifier,username.eq.$cleanIdentifier)",
+                passwordFilter = "eq.$password"
+            )
             val userDto = users.firstOrNull()
             if (userDto != null) {
                 val user = userDto.toDomain()
                 sessionManager.setCurrentUser(user.id)
                 Result.success(user)
             } else {
-                Result.failure(Exception("Invalid email or password"))
+                Result.failure(Exception("AUTH_INVALID_CREDENTIALS"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-
-    override suspend fun register(name: String, email: String, password: String): Result<User> {
+    override suspend fun register(name: String, username: String, email: String, password: String): Result<User> {
         return try {
             val newUserId = UUID.randomUUID().toString()
             val newDto = UserDto(
                 id = newUserId,
-                name = name,
-                email = email,
+                name = name.trim(),
+                username = username.trim(),
+                email = email.trim(),
                 password = password,
                 avatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde",
                 isPremium = false,

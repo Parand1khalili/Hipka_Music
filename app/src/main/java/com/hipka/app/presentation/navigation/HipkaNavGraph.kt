@@ -74,6 +74,14 @@ fun HipkaNavGraph(
         }
     }
 
+    LaunchedEffect(mainUiState.isLoggedIn, mainUiState.isSessionChecked) {
+        if (mainUiState.isSessionChecked && !mainUiState.isLoggedIn) {
+            navController.navigate(Screen.Auth.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -107,6 +115,7 @@ fun HipkaNavGraph(
             // --- صفحه ورود / ثبت نام ---
             composable(Screen.Auth.route) {
                 AuthScreen(
+                    onMainIntent = onMainIntent,
                     onAuthSuccess = {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Auth.route) { inclusive = true }
@@ -114,7 +123,6 @@ fun HipkaNavGraph(
                     }
                 )
             }
-
             // --- Bottom nav destinations --------------------------------
             composable(Screen.Home.route) {
                 val homeViewModel: HomeViewModel = hiltViewModel()
@@ -269,8 +277,8 @@ fun HipkaNavGraph(
                     onMainIntent = onMainIntent,
                     onNavigateBack = { navController.popBackStack() },
                     onLoggedOut = {
-                        navController.navigate(Screen.Profile.route) {
-                            popUpTo(Screen.Home.route)
+                        navController.navigate(Screen.Auth.route) {
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )

@@ -147,7 +147,9 @@
     <string name="auth_welcome_back">خوش آمدید</string>
     <string name="auth_create_account">ساخت حساب جدید</string>
     <string name="auth_full_name">نام و نام خانوادگی</string>
+
     <string name="auth_email">ایمیل</string>
+    <string name="auth_username_or_email">نام کاربری یا ایمیل</string>
     <string name="auth_password">رمز عبور</string>
     <string name="auth_login_button">ورود</string>
     <string name="auth_register_button">ثبت‌نام</string>
@@ -158,4 +160,5 @@
     <string name="auth_error_fill_fields">لطفاً تمامی فیلدها را پر کنید</string>
     <string name="auth_error_enter_name">لطفاً نام خود را وارد کنید</string>
     <string name="auth_error_invalid_credentials">ایمیل یا رمز عبور اشتباه است</string>
+    <string name="auth_username">نام کاربری</string>
 </resources>
