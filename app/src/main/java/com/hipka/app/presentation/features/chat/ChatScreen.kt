@@ -1,5 +1,8 @@
 package com.hipka.app.presentation.features.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,11 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -52,11 +53,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -76,36 +77,34 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    val density = LocalDensity.current
-    val isImeVisible = WindowInsets.ime.getBottom(density) > 0
-
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(0)
         }
     }
 
-    LaunchedEffect(isImeVisible) {
-        if (isImeVisible && uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(0)
-        }
-    }
-
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(verticalArrangement = Arrangement.Center) {
                         Text(
                             text = uiState.peerUser?.name ?: "Chat",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium
                         )
-                        if (uiState.isPeerTyping) {
+                        // ✨ نمایش انیمیشن‌دار و روان وضعیت typing...
+                        AnimatedVisibility(
+                            visible = uiState.isPeerTyping,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
                             Text(
                                 text = stringResource(id = R.string.chat_typing_indicator),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -120,25 +119,28 @@ fun ChatScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            Box(modifier = Modifier.imePadding()) {
+                ChatComposer(uiState = uiState, onIntent = viewModel::onIntent)
+            }
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .imePadding()
         ) {
             when {
                 uiState.isLoading -> Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
                 uiState.errorMessage != null && uiState.messages.isEmpty() -> Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .padding(HipkaTheme.dimens.spaceM),
                     contentAlignment = Alignment.Center
                 ) {
@@ -150,11 +152,9 @@ fun ChatScreen(
                     onSongClick = { songId ->
                         uiState.sharedSongs[songId]?.let(onPlaySong)
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
-
-            ChatComposer(uiState = uiState, onIntent = viewModel::onIntent)
         }
 
         if (uiState.isSongPickerOpen) {
@@ -202,7 +202,6 @@ private fun MessageBubble(
     val bubbleColor = if (isMine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     val textColor = if (isMine) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
-    // تعیین حداقل عرض برای کارت‌های آهنگ جهت جلوگیری از فشرده شدن
     val minWidth = if (message.sharedSongId != null) 250.dp else 60.dp
 
     Box(
@@ -223,7 +222,6 @@ private fun MessageBubble(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
             ) {
                 if (message.sharedSongId != null) {
-                    // 🎵 کارت موزیک به استایل تلگرام
                     TelegramAudioCard(
                         song = sharedSong,
                         textColor = textColor,
@@ -270,7 +268,6 @@ private fun TelegramAudioCard(
             modifier = Modifier.padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // کاور گرد آهنگ با دکمه Play
             Box(
                 modifier = Modifier
                     .size(46.dp)
@@ -285,7 +282,6 @@ private fun TelegramAudioCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
-                    // لایه تیره برای مشخص شدن دکمه Play
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -311,7 +307,6 @@ private fun TelegramAudioCard(
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // اطلاعات نام آهنگ و خواننده
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = song?.title ?: stringResource(R.string.loading),

@@ -1,5 +1,6 @@
 package com.hipka.app.data.repository
 
+import android.util.Log
 import com.hipka.app.data.local.dao.MessageDao
 import com.hipka.app.data.local.entity.OfflineMessageEntity
 import com.hipka.app.data.remote.api.MessageApi
@@ -10,11 +11,14 @@ import com.hipka.app.domain.model.MessageStatus
 import com.hipka.app.domain.repository.ChatRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.RealtimeChannel
 import io.github.jan.supabase.realtime.broadcast
 import io.github.jan.supabase.realtime.broadcastFlow
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.decodeRecord
 import io.github.jan.supabase.realtime.postgresChangeFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,7 +26,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
@@ -39,12 +42,16 @@ class ChatRepositoryImpl @Inject constructor(
     @Serializable
     private data class TypingPayload(val senderId: String, val isTyping: Boolean)
 
-    // ✨ ساختار سبک اختصاصی برای پکت‌های آپدیت وضعیت سوبابیس جهت جلوگیری از خطای سریالایز
-    @Serializable
-    private data class MessageStatusUpdateDto(val id: String, val status: String)
-
-    // جریان انتشار تغییرات وضعیت برای تست لوکال/دیتابیس
     private val localStatusUpdatesFlow = MutableSharedFlow<Message>(extraBufferCapacity = 64)
+
+    private val jsonFormatter = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
+
+    // ✨ نگه‌داشتن مرجع چنل تایپینگ فعال جهت جلوگیری از disconnect/reconnect مداوم
+    private var activeTypingChannel: RealtimeChannel? = null
+    private var activeTypingChannelName: String? = null
 
     private companion object {
         const val TYPING_EVENT = "typing"
@@ -68,22 +75,29 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun sendMessage(
+        id: String,
         myUserId: String,
         receiverId: String,
         text: String,
         sharedSongId: String?
     ): Message {
         val dto = MessageDto(
-            id = UUID.randomUUID().toString(),
+            id = id,
             senderId = myUserId,
             receiverId = receiverId,
-            text = text,
-            status = "SENT",
-            sharedSongId = sharedSongId,
+            text = text.ifBlank { " " },
+            status = MessageStatus.SENT.name,
+            sharedSongId = sharedSongId?.ifBlank { null },
             timestamp = System.currentTimeMillis()
         )
-        messageApi.sendMessage(dto)
         messageDao.insertMessage(dto.toEntity())
+
+        runCatching {
+            messageApi.sendMessage(dto)
+        }.onFailure { e ->
+            Log.e("ChatRepo", "Network error on sendMessage: ${e.message}")
+        }
+
         return dto.toDomain()
     }
 
@@ -97,9 +111,13 @@ class ChatRepositoryImpl @Inject constructor(
 
         val collectJob = launch {
             changes.collect { action ->
-                val dto = action.decodeRecord<MessageDto>()
-                messageDao.insertMessage(dto.toEntity())
-                trySend(dto.toDomain())
+                runCatching {
+                    val dto = action.decodeRecord<MessageDto>()
+                    messageDao.insertMessage(dto.toEntity())
+                    trySend(dto.toDomain())
+                }.onFailure { e ->
+                    Log.e("ChatRepo", "Error parsing incoming message: ${e.message}")
+                }
             }
         }
 
@@ -107,7 +125,9 @@ class ChatRepositoryImpl @Inject constructor(
 
         awaitClose {
             collectJob.cancel()
-            runBlocking { channel.unsubscribe() }
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching { channel.unsubscribe() }
+            }
         }
     }
 
@@ -119,25 +139,27 @@ class ChatRepositoryImpl @Inject constructor(
             filter = "sender_id=eq.$myUserId"
         }
 
-        // ۱. شنیدن تغییرات لوکال (برای تست تک‌گوشی و حالت آفلاین)
         val localJob = launch {
             localStatusUpdatesFlow
                 .filter { it.senderId == myUserId }
                 .collect { trySend(it) }
         }
 
-        // ۲. شنیدن تغییرات Realtime سوبابیس (بدون خطای سریالایز)
         val collectJob = launch {
             changes.collect { action ->
-                try {
-                    val updateDto = action.decodeRecord<MessageStatusUpdateDto>()
-                    messageDao.updateStatus(updateDto.id, updateDto.status)
-                    val updatedEntity = messageDao.getMessageById(updateDto.id)
-                    if (updatedEntity != null) {
-                        trySend(updatedEntity.toDomain())
+                runCatching {
+                    val recordJson = action.record
+                    val msgId = recordJson["id"]?.toString()?.replace("\"", "")
+                    val statusStr = recordJson["status"]?.toString()?.replace("\"", "") ?: "READ"
+
+                    if (!msgId.isNullOrEmpty()) {
+                        messageDao.updateStatus(msgId, statusStr)
+                        val updatedEntity = messageDao.getMessageById(msgId)
+                        if (updatedEntity != null) {
+                            trySend(updatedEntity.toDomain())
+                        }
                     }
-                } catch (_: Exception) {
-                    // Fallback
+                }.onFailure {
                     runCatching {
                         val fullDto = action.decodeRecord<MessageDto>()
                         messageDao.updateStatus(fullDto.id, fullDto.status)
@@ -152,26 +174,28 @@ class ChatRepositoryImpl @Inject constructor(
         awaitClose {
             localJob.cancel()
             collectJob.cancel()
-            runBlocking { channel.unsubscribe() }
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching { channel.unsubscribe() }
+            }
         }
     }
 
     override suspend fun markConversationAsRead(myUserId: String, peerUserId: String) {
-        try {
-            messageApi.markConversationAsRead(
-                senderIdFilter = "eq.$peerUserId",
-                receiverIdFilter = "eq.$myUserId"
-            )
-        } catch (_: Exception) {
-        }
-
         messageDao.updateStatusForConversation(
             senderId = peerUserId,
             receiverId = myUserId,
             status = MessageStatus.READ.name
         )
 
-        // ✨ انتشار تغییر وضعیت سین شدن به جریان زنده لوکال
+        runCatching {
+            messageApi.markConversationAsRead(
+                senderIdFilter = "eq.$peerUserId",
+                receiverIdFilter = "eq.$myUserId"
+            )
+        }.onFailure { e ->
+            Log.e("ChatRepo", "Error marking as read on remote: ${e.message}")
+        }
+
         val conversation = messageDao.getConversationOnce(myUserId, peerUserId)
         conversation.filter { it.senderId == peerUserId && it.status == MessageStatus.READ.name }
             .forEach { entity ->
@@ -179,31 +203,51 @@ class ChatRepositoryImpl @Inject constructor(
             }
     }
 
+    // ✨ ۱. اتصال و سابسکرایب پایدار چنل تایپینگ
     override fun observeTypingStatus(myUserId: String, peerUserId: String): Flow<Boolean> = callbackFlow {
-        val channel = supabaseClient.channel(typingChannelName(myUserId, peerUserId))
+        val chName = typingChannelName(myUserId, peerUserId)
+        val channel = getOrCreateTypingChannel(chName)
 
         val collectJob = launch {
             channel.broadcastFlow<TypingPayload>(event = TYPING_EVENT)
                 .filter { it.senderId == peerUserId }
                 .map { it.isTyping }
-                .collect { isTyping -> trySend(isTyping) }
+                .collect { isTyping ->
+                    Log.d("ChatRepo", "Received typing status: $isTyping")
+                    trySend(isTyping)
+                }
         }
-
-        channel.subscribe()
 
         awaitClose {
             collectJob.cancel()
-            runBlocking { channel.unsubscribe() }
         }
     }
 
+    // ✨ ۲. ارسال سیگنال تایپینگ روی همان کانال فعال و متصل
     override suspend fun sendTypingStatus(myUserId: String, peerUserId: String, isTyping: Boolean) {
-        val channel = supabaseClient.channel(typingChannelName(myUserId, peerUserId))
+        runCatching {
+            val chName = typingChannelName(myUserId, peerUserId)
+            val channel = getOrCreateTypingChannel(chName)
 
-        val payload = TypingPayload(senderId = myUserId, isTyping = isTyping)
-        val jsonPayload = Json.encodeToJsonElement(payload).jsonObject
+            val payload = TypingPayload(senderId = myUserId, isTyping = isTyping)
+            val jsonPayload = jsonFormatter.encodeToJsonElement(payload).jsonObject
 
-        channel.broadcast(event = TYPING_EVENT, message = jsonPayload)
+            Log.d("ChatRepo", "Broadcasting typing: $isTyping on $chName")
+            channel.broadcast(event = TYPING_EVENT, message = jsonPayload)
+        }.onFailure { e ->
+            Log.e("ChatRepo", "Error in sendTypingStatus: ${e.message}")
+        }
+    }
+
+    private suspend fun getOrCreateTypingChannel(chName: String): RealtimeChannel {
+        if (activeTypingChannelName == chName && activeTypingChannel != null) {
+            return activeTypingChannel!!
+        }
+        val channel = supabaseClient.channel(chName)
+        channel.subscribe()
+        activeTypingChannel = channel
+        activeTypingChannelName = chName
+        return channel
     }
 
     private fun typingChannelName(userIdA: String, userIdB: String): String =
