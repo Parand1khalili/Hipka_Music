@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
@@ -39,7 +40,7 @@ fun ArtistDetailScreen(
     imageUrl: String,
     likedSongIds: Set<String>,
     onBackClick: () -> Unit,
-    onSongClick: (Song) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
     onLikeClick: (Song) -> Unit,
     onShuffleClick: (List<Song>) -> Unit,
     viewModel: ArtistDetailViewModel = hiltViewModel()
@@ -122,7 +123,7 @@ fun ArtistDetailScreen(
                         val isLiked = likedSongIds.contains(song.id)
                         ArtistSongRowItem(
                             song = song.copy(isLiked = isLiked),
-                            onClick = { onSongClick(song) },
+                            onClick = { onSongClick(uiState.songs, song) },
                             onLikeClick = { onLikeClick(song) }
                         )
                     }
@@ -145,10 +146,9 @@ private fun ArtistSongRowItem(
             .padding(horizontal = HipkaTheme.dimens.spaceM, vertical = HipkaTheme.dimens.spaceS),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
+        CoverImage(
             model = song.coverImageUrl,
             contentDescription = song.title,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(52.dp)
                 .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))

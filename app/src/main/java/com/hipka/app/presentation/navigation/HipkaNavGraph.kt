@@ -28,7 +28,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.hipka.app.R
-import com.hipka.app.domain.model.Artist
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.features.ArtistDetail.ArtistDetailScreen
 import com.hipka.app.presentation.features.auth.AuthScreen
@@ -66,12 +65,33 @@ fun HipkaNavGraph(
     val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val songInteractionViewModel: SongInteractionViewModel = hiltViewModel()
     val likedSongIds by songInteractionViewModel.likedSongIds.collectAsStateWithLifecycle()
+    val downloadedSongIds by songInteractionViewModel.downloadedSongIds.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(playerViewModel) {
         playerViewModel.playbackErrors.collect { message ->
             snackbarHostState.showSnackbar(message)
         }
+    }
+    val downloadStartedMessage = stringResource(id = R.string.download_started)
+    val premiumRequiredMessage = stringResource(id = R.string.download_premium_required)
+    LaunchedEffect(songInteractionViewModel) {
+        songInteractionViewModel.downloadStarted.collect {
+            snackbarHostState.showSnackbar(downloadStartedMessage)
+        }
+    }
+    LaunchedEffect(songInteractionViewModel) {
+        songInteractionViewModel.premiumRequired.collect {
+            snackbarHostState.showSnackbar(premiumRequiredMessage)
+        }
+    }
+
+    // پخش صف کامل لیست فعلی از نقطه کلیک‌شده — نه فقط یک آهنگ تنها — تا دکمه‌های
+    // بعدی/قبلی در Now Playing در همه‌ی لیست‌های آهنگ (نه فقط هوم) کار کنند
+    val playQueueAndTrack: (List<Song>, Song) -> Unit = { songs, song ->
+        songInteractionViewModel.addToRecentlyPlayed(song)
+        val startIndex = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+        playerViewModel.onIntent(PlayerIntent.PlayQueue(songs, startIndex))
     }
 
     LaunchedEffect(mainUiState.isLoggedIn, mainUiState.isSessionChecked) {
@@ -91,14 +111,28 @@ fun HipkaNavGraph(
             // مخفی کردن منوی پایین در صفحه ورود / ثبت نام
             if (currentRoute != Screen.Auth.route) {
                 Column {
-                    playerUiState.currentSong?.let { song ->
-                        MiniPlayerBar(
-                            song = song,
-                            isPlaying = playerUiState.isPlaying,
-                            onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
-                            onClick = { navController.navigate(Screen.NowPlaying.route) },
-                            modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
-                        )
+                    // مینی‌پلیر داخل خود صفحه Now Playing نمایش داده نمی‌شود چون پلیر کامل باز است
+                    if (currentRoute != Screen.NowPlaying.route) {
+                        playerUiState.currentSong?.let { song ->
+                            MiniPlayerBar(
+                                song = song,
+                                isPlaying = playerUiState.isPlaying,
+                                onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
+                                isBuffering = playerUiState.isBuffering,
+                                isShuffleEnabled = playerUiState.isShuffleEnabled,
+                                repeatMode = playerUiState.repeatMode,
+                                onToggleShuffle = { playerViewModel.onIntent(PlayerIntent.ToggleShuffle) },
+                                onCycleRepeatMode = { playerViewModel.onIntent(PlayerIntent.CycleRepeatMode) },
+                                onSkipNext = { playerViewModel.onIntent(PlayerIntent.SkipNext) },
+                                onSkipPrevious = { playerViewModel.onIntent(PlayerIntent.SkipPrevious) },
+                                onClose = { playerViewModel.onIntent(PlayerIntent.Stop) },
+                                onClick = { navController.navigate(Screen.NowPlaying.route) },
+                                modifier = Modifier.padding(
+                                    horizontal = HipkaTheme.dimens.spaceS,
+                                    vertical = HipkaTheme.dimens.spaceS
+                                )
+                            )
+                        }
                     }
                     HipkaBottomBar(navController)
                 }
@@ -176,7 +210,7 @@ fun HipkaNavGraph(
             composable(Screen.TopArtists.route) {
                 TopArtistsScreen(
                     onBackClick = { navController.popBackStack() },
-                    onArtistClick = { artist: Artist ->
+                    onArtistClick = { artist ->
                         navController.navigate(Screen.ArtistDetail.createRoute(artist.name, artist.imageUrl))
                     }
                 )
@@ -198,14 +232,9 @@ fun HipkaNavGraph(
                     imageUrl = imageUrl,
                     likedSongIds = likedSongIds,
                     onBackClick = { navController.popBackStack() },
-                    onSongClick = { song: Song ->
-                        songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
-                    },
-                    onLikeClick = { song: Song ->
-                        songInteractionViewModel.toggleLike(song)
-                    },
-                    onShuffleClick = { songList: List<Song> ->
+                    onSongClick = playQueueAndTrack,
+                    onLikeClick = { song -> songInteractionViewModel.toggleLike(song) },
+                    onShuffleClick = { songList ->
                         playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
                     }
                 )
@@ -220,10 +249,7 @@ fun HipkaNavGraph(
                     sectionName = section,
                     likedSongIds = likedSongIds,
                     onBackClick = { navController.popBackStack() },
-                    onSongClick = { song ->
-                        songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
-                    },
+                    onSongClick = playQueueAndTrack,
                     onLikeClick = { song -> songInteractionViewModel.toggleLike(song) }
                 )
             }
@@ -231,10 +257,7 @@ fun HipkaNavGraph(
             composable(Screen.Search.route) {
                 SearchScreen(
                     likedSongIds = likedSongIds,
-                    onSongClick = { song ->
-                        songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
-                    },
+                    onSongClick = playQueueAndTrack,
                     onLikeClick = { song -> songInteractionViewModel.toggleLike(song) },
                     onNavigateToDiscoverUsers = { navController.navigate("followed_users/discover") }
                 )
@@ -242,10 +265,7 @@ fun HipkaNavGraph(
 
             composable(Screen.Downloads.route) {
                 DownloadsScreen(
-                    onSongClick = { song ->
-                        songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
-                    }
+                    onSongClick = playQueueAndTrack
                 )
             }
 
@@ -264,10 +284,19 @@ fun HipkaNavGraph(
 
             // --- Secondary destinations ----------------------------------
             composable(Screen.NowPlaying.route) {
+                val currentSongId = playerUiState.currentSong?.id
                 PlayerScreen(
                     uiState = playerUiState,
                     onIntent = { playerViewModel.onIntent(it) },
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    isDownloaded = currentSongId != null && downloadedSongIds.contains(currentSongId),
+                    onDownloadClick = {
+                        playerUiState.currentSong?.let { songInteractionViewModel.downloadSong(it) }
+                    },
+                    isLiked = currentSongId != null && likedSongIds.contains(currentSongId),
+                    onLikeClick = {
+                        playerUiState.currentSong?.let { songInteractionViewModel.toggleLike(it) }
+                    }
                 )
             }
 
@@ -300,10 +329,7 @@ fun HipkaNavGraph(
 
             composable(Screen.LikedSongs.route) {
                 LikedSongsScreen(
-                    onSongClick = { song ->
-                        songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
-                    },
+                    onSongClick = playQueueAndTrack,
                     onShuffleAllClick = { songList ->
                         playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
                     },
@@ -313,10 +339,7 @@ fun HipkaNavGraph(
 
             composable(Screen.RecentlyPlayed.route) {
                 RecentSongsScreen(
-                    onSongClick = { song ->
-                        songInteractionViewModel.addToRecentlyPlayed(song)
-                        playerViewModel.onIntent(PlayerIntent.PlaySong(song))
-                    },
+                    onSongClick = playQueueAndTrack,
                     onShuffleAllClick = { songList ->
                         playerViewModel.onIntent(PlayerIntent.ShufflePlayList(songList))
                     },
