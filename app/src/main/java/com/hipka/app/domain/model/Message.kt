@@ -6,8 +6,10 @@ enum class MessageStatus {
     READ;
 
     companion object {
-        fun fromRaw(value: String): MessageStatus =
-            entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: SENDING
+        fun fromRaw(value: String?): MessageStatus {
+            if (value.isNullOrBlank()) return SENT
+            return entries.firstOrNull { it.name.equals(value.trim(), ignoreCase = true) } ?: SENT
+        }
     }
 }
 

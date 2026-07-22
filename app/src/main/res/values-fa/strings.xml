@@ -98,7 +98,7 @@
     <string name="chat_input_hint">پیام خود را بنویسید…</string>
     <string name="chat_message_hint">پیام</string>
     <string name="tap_to_chat_hint">برای گفتگو ضربه بزنید</string>
-    <string name="chat_typing_indicator">در حال تایپ…</string>
+    <string name="chat_typing_indicator">در حال نوشتن…</string>
     <string name="chat_share_song_cd">اشتراک‌گذاری آهنگ</string>
     <string name="chat_pick_song_title">ارسال آهنگ</string>
     <string name="chat_no_songs_to_share">هنوز آهنگی برای اشتراک‌گذاری موجود نیست.</string>
