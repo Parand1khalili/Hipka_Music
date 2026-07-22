@@ -7,9 +7,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,10 +21,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -53,10 +58,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.palette.graphics.Palette
-import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.R
+import com.hipka.app.domain.model.RepeatMode
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +77,8 @@ fun PlayerScreen(
     onBackClick: () -> Unit,
     isDownloaded: Boolean = false,
     onDownloadClick: () -> Unit = {},
+    isLiked: Boolean = false,
+    onLikeClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -132,6 +140,8 @@ fun PlayerScreen(
                 onIntent = onIntent,
                 isDownloaded = isDownloaded,
                 onDownloadClick = onDownloadClick,
+                isLiked = isLiked,
+                onLikeClick = onLikeClick,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -148,126 +158,197 @@ private fun NowPlayingContent(
     onIntent: (PlayerIntent) -> Unit,
     isDownloaded: Boolean,
     onDownloadClick: () -> Unit,
+    isLiked: Boolean,
+    onLikeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        AsyncImage(
-            model = song.coverImageUrl,
-            contentDescription = null,
-            modifier = Modifier
-                .size(HipkaTheme.dimens.albumCoverL)
-                .clip(RoundedCornerShape(HipkaTheme.dimens.cornerL))
-        )
+    // بدون اسکرول: اندازه کاور و ویژوالایزر بر اساس ارتفاع واقعی صفحه محاسبه می‌شود
+    // تا در دستگاه‌های مختلف، کل محتوا بدون نیاز به اسکرول جا شود
+    BoxWithConstraints(modifier = modifier) {
+        val coverSize = (maxHeight * 0.3f).coerceIn(120.dp, HipkaTheme.dimens.albumCoverL)
+        val visualizerHeight = (HipkaTheme.dimens.visualizerHeight * 0.75f)
 
-        Box(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
-
-        Text(
-            text = song.title,
-            style = MaterialTheme.typography.headlineSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = song.artistName,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Box(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
-
-        AudioVisualizer(
-            isPlaying = uiState.isPlaying,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(HipkaTheme.dimens.visualizerHeight)
-        )
-
-        Box(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
-
-        var isDragging by remember { mutableStateOf(false) }
-        var dragPositionMs by remember { mutableLongStateOf(0L) }
-        val durationMs = uiState.progress.durationMs.coerceAtLeast(1L)
-        val displayedPositionMs = if (isDragging) dragPositionMs else uiState.progress.positionMs
-
-        Slider(
-            value = displayedPositionMs.toFloat().coerceIn(0f, durationMs.toFloat()),
-            valueRange = 0f..durationMs.toFloat(),
-            onValueChange = {
-                isDragging = true
-                dragPositionMs = it.roundToLong()
-            },
-            onValueChangeFinished = {
-                onIntent(PlayerIntent.SeekTo(dragPositionMs))
-                isDragging = false
-            }
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = formatDuration(displayedPositionMs), style = MaterialTheme.typography.labelSmall)
-            Text(text = formatDuration(uiState.progress.durationMs), style = MaterialTheme.typography.labelSmall)
-        }
+            CoverImage(
+                model = song.coverImageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(coverSize)
+                    .clip(RoundedCornerShape(HipkaTheme.dimens.cornerL))
+            )
 
-        Box(modifier = Modifier.height(HipkaTheme.dimens.spaceL))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceL)
-        ) {
-            IconButton(onClick = { onIntent(PlayerIntent.SkipPrevious) }) {
-                Icon(
-                    imageVector = Icons.Filled.SkipPrevious,
-                    contentDescription = stringResource(id = R.string.player_skip_previous_cd),
-                    modifier = Modifier.size(36.dp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = song.artistName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            FilledIconButton(
-                onClick = { onIntent(PlayerIntent.TogglePlayPause) },
-                modifier = Modifier.size(72.dp)
+            AudioVisualizer(
+                isPlaying = uiState.isPlaying,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(visualizerHeight)
+            )
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                var isDragging by remember { mutableStateOf(false) }
+                var dragPositionMs by remember { mutableLongStateOf(0L) }
+                val durationMs = uiState.progress.durationMs.coerceAtLeast(1L)
+                val displayedPositionMs = if (isDragging) dragPositionMs else uiState.progress.positionMs
+
+                Slider(
+                    value = displayedPositionMs.toFloat().coerceIn(0f, durationMs.toFloat()),
+                    valueRange = 0f..durationMs.toFloat(),
+                    onValueChange = {
+                        isDragging = true
+                        dragPositionMs = it.roundToLong()
+                    },
+                    onValueChangeFinished = {
+                        onIntent(PlayerIntent.SeekTo(dragPositionMs))
+                        isDragging = false
+                    }
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = formatDuration(displayedPositionMs), style = MaterialTheme.typography.labelSmall)
+                    Text(text = formatDuration(uiState.progress.durationMs), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = stringResource(
-                        id = if (uiState.isPlaying) R.string.player_pause_cd else R.string.player_play_cd
-                    ),
-                    modifier = Modifier.size(36.dp)
+                ShuffleButton(
+                    isEnabled = uiState.isShuffleEnabled,
+                    onClick = { onIntent(PlayerIntent.ToggleShuffle) }
+                )
+
+                IconButton(onClick = { onIntent(PlayerIntent.SkipPrevious) }) {
+                    Icon(
+                        imageVector = Icons.Filled.SkipPrevious,
+                        contentDescription = stringResource(id = R.string.player_skip_previous_cd),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                FilledIconButton(
+                    onClick = { onIntent(PlayerIntent.TogglePlayPause) },
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    if (uiState.isBuffering) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp,
+                            color = LocalContentColor.current
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(
+                                id = if (uiState.isPlaying) R.string.player_pause_cd else R.string.player_play_cd
+                            ),
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+
+                IconButton(onClick = { onIntent(PlayerIntent.SkipNext) }) {
+                    Icon(
+                        imageVector = Icons.Filled.SkipNext,
+                        contentDescription = stringResource(id = R.string.player_skip_next_cd),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                RepeatButton(
+                    repeatMode = uiState.repeatMode,
+                    onClick = { onIntent(PlayerIntent.CycleRepeatMode) }
                 )
             }
 
-            IconButton(onClick = { onIntent(PlayerIntent.SkipNext) }) {
-                Icon(
-                    imageVector = Icons.Filled.SkipNext,
-                    contentDescription = stringResource(id = R.string.player_skip_next_cd),
-                    modifier = Modifier.size(36.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
+            ) {
+                PlaybackSpeedButton(
+                    currentSpeed = uiState.playbackSpeed,
+                    onSpeedChange = { onIntent(PlayerIntent.SetPlaybackSpeed(it)) }
+                )
+
+                LikeButton(isLiked = isLiked, onClick = onLikeClick)
+
+                DownloadButton(
+                    isDownloaded = isDownloaded,
+                    onClick = onDownloadClick
                 )
             }
         }
+    }
+}
 
-        Box(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
+@Composable
+private fun ShuffleButton(isEnabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.Filled.Shuffle,
+            contentDescription = stringResource(
+                id = if (isEnabled) R.string.player_shuffle_on_cd else R.string.player_shuffle_off_cd
+            ),
+            tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
-        ) {
-            PlaybackSpeedButton(
-                currentSpeed = uiState.playbackSpeed,
-                onSpeedChange = { onIntent(PlayerIntent.SetPlaybackSpeed(it)) }
-            )
+@Composable
+private fun RepeatButton(repeatMode: RepeatMode, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+            contentDescription = stringResource(
+                id = when (repeatMode) {
+                    RepeatMode.OFF -> R.string.player_repeat_off_cd
+                    RepeatMode.ALL -> R.string.player_repeat_all_cd
+                    RepeatMode.ONE -> R.string.player_repeat_one_cd
+                }
+            ),
+            tint = if (repeatMode == RepeatMode.OFF) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.primary
+            }
+        )
+    }
+}
 
-            DownloadButton(
-                isDownloaded = isDownloaded,
-                onClick = onDownloadClick
-            )
-        }
+@Composable
+private fun LikeButton(isLiked: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+            contentDescription = stringResource(
+                id = if (isLiked) R.string.player_unlike_cd else R.string.player_like_cd
+            ),
+            tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

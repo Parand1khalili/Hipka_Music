@@ -33,7 +33,7 @@ import com.hipka.app.presentation.theme.HipkaTheme
 @Composable
 fun LikedSongsScreen(
     viewModel: LikedSongsViewModel = hiltViewModel(),
-    onSongClick: (Song) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
     onShuffleAllClick: (List<Song>) -> Unit, // ✨ کالبک جدید برای شافل سراسری در گراف ناوبری
     onNavigateBack: () -> Unit
 ) {
@@ -100,7 +100,7 @@ fun LikedSongsScreen(
                         items(songsWithLikeStatus, key = { it.id }) { song ->
                             SongItemPlaceholder(
                                 song = song,
-                                onClick = { onSongClick(song) },
+                                onClick = { onSongClick(songsWithLikeStatus, song) },
                                 onLikeClick = { viewModel.onIntent(LikedSongsIntent.ToggleLike(song.id)) }
                             )
                         }

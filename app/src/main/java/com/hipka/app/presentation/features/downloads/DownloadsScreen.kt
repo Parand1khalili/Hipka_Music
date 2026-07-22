@@ -50,7 +50,7 @@ import com.hipka.app.presentation.theme.HipkaTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadsScreen(
-    onSongClick: (Song) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -104,7 +104,7 @@ fun DownloadsScreen(
                     items(state.songs, key = { it.id }) { song ->
                         SwipeToDeleteSongItem(
                             song = song,
-                            onClick = { onSongClick(song) },
+                            onClick = { onSongClick(state.songs, song) },
                             onDelete = { viewModel.onIntent(DownloadsIntent.DeleteDownload(song.id)) }
                         )
                     }

@@ -38,6 +38,15 @@
     <string name="player_sleep_timer_cd">Sleep timer</string>
     <string name="player_sleep_timer_minutes">%d min</string>
     <string name="player_sleep_timer_off">Turn off</string>
+    <string name="player_like_cd">Like</string>
+    <string name="player_unlike_cd">Unlike</string>
+    <string name="player_close_cd">Close player</string>
+    <string name="player_shuffle_on_cd">Shuffle on</string>
+    <string name="player_shuffle_off_cd">Shuffle off</string>
+    <string name="player_repeat_off_cd">Repeat off</string>
+    <string name="player_repeat_all_cd">Repeat all</string>
+    <string name="player_repeat_one_cd">Repeat one</string>
+    <string name="player_offline_error">You\'re offline</string>
 
     <!-- Search screen -->
     <string name="search_hint">Search songs or artists...</string>

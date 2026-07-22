@@ -26,9 +26,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Playlist
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.presentation.common.shimmerEffect
 import com.hipka.app.presentation.theme.HipkaTheme
 
@@ -184,16 +184,13 @@ private fun PlaylistCard(
                 .background(cardBackground)
                 .padding(HipkaTheme.dimens.spaceM)
         ) {
-            if (!playlist.coverImageUrl.isNullOrEmpty()) {
-                AsyncImage(
-                    model = playlist.coverImageUrl,
-                    contentDescription = playlist.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
-                )
-            }
+            CoverImage(
+                model = playlist.coverImageUrl,
+                contentDescription = playlist.title,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))
+            )
 
             Text(
                 text = playlist.title,

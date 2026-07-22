@@ -2,6 +2,7 @@ package com.hipka.app.presentation.features.player
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hipka.app.domain.model.RepeatMode
 import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.PlayerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +50,21 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { it.copy(playbackSpeed = speed) }
             }
         }
+        viewModelScope.launch {
+            playerRepository.isBuffering.collect { isBuffering ->
+                _uiState.update { it.copy(isBuffering = isBuffering) }
+            }
+        }
+        viewModelScope.launch {
+            playerRepository.isShuffleEnabled.collect { enabled ->
+                _uiState.update { it.copy(isShuffleEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            playerRepository.repeatMode.collect { mode ->
+                _uiState.update { it.copy(repeatMode = mode) }
+            }
+        }
     }
 
     fun onIntent(intent: PlayerIntent) {
@@ -56,6 +72,7 @@ class PlayerViewModel @Inject constructor(
             is PlayerIntent.PlaySong -> playSong(intent.song)
             is PlayerIntent.PlayQueue -> playQueue(intent.songs, intent.startIndex)
             PlayerIntent.TogglePlayPause -> togglePlayPause()
+            PlayerIntent.Stop -> stop()
             PlayerIntent.SkipNext -> skipToNext()
             PlayerIntent.SkipPrevious -> skipToPrevious()
             is PlayerIntent.SeekTo -> seekTo(intent.positionMs)
@@ -67,6 +84,8 @@ class PlayerViewModel @Inject constructor(
                     // TODO: در صورت نیاز در اسپرینت‌های بعدی کل لیست shuffledList به صف پخش (Queue) ریپازیتوری پاس داده شود.
                 }
             }
+            PlayerIntent.ToggleShuffle -> toggleShuffle()
+            PlayerIntent.CycleRepeatMode -> cycleRepeatMode()
             is PlayerIntent.SetSleepTimer -> playerRepository.startSleepTimer(intent.durationMs)
             PlayerIntent.CancelSleepTimer -> playerRepository.cancelSleepTimer()
             is PlayerIntent.SetPlaybackSpeed -> setPlaybackSpeed(intent.speed)
@@ -89,6 +108,23 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             if (_uiState.value.isPlaying) playerRepository.pause() else playerRepository.resume()
         }
+    }
+
+    private fun stop() {
+        viewModelScope.launch { playerRepository.stop() }
+    }
+
+    private fun toggleShuffle() {
+        viewModelScope.launch { playerRepository.setShuffleEnabled(!_uiState.value.isShuffleEnabled) }
+    }
+
+    private fun cycleRepeatMode() {
+        val nextMode = when (_uiState.value.repeatMode) {
+            RepeatMode.OFF -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.OFF
+        }
+        viewModelScope.launch { playerRepository.setRepeatMode(nextMode) }
     }
 
     private fun skipToNext() {

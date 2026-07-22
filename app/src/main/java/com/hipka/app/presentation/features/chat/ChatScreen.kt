@@ -60,7 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Message
 import com.hipka.app.domain.model.MessageStatus
@@ -276,10 +276,9 @@ private fun TelegramAudioCard(
                 contentAlignment = Alignment.Center
             ) {
                 if (!song?.coverImageUrl.isNullOrEmpty()) {
-                    AsyncImage(
+                    CoverImage(
                         model = song?.coverImageUrl,
                         contentDescription = null,
-                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                     Box(
@@ -425,10 +424,9 @@ private fun SongPickerSheet(
                                 .padding(vertical = HipkaTheme.dimens.spaceS),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            AsyncImage(
+                            CoverImage(
                                 model = song.coverImageUrl,
                                 contentDescription = null,
-                                contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .size(HipkaTheme.dimens.albumCoverS)
                                     .clip(RoundedCornerShape(HipkaTheme.dimens.cornerS))

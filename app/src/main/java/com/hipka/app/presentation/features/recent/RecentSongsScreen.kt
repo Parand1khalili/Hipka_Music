@@ -34,7 +34,7 @@ import com.hipka.app.presentation.theme.HipkaTheme
 @Composable
 fun RecentSongsScreen(
     viewModel: RecentSongsViewModel = hiltViewModel(),
-    onSongClick: (Song) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
     onShuffleAllClick: (List<Song>) -> Unit, // ✨ کالبک جدید برای شافل سراسری
     onNavigateBack: () -> Unit
 ) {
@@ -99,7 +99,7 @@ fun RecentSongsScreen(
                         items(state.songs, key = { it.id }) { song ->
                             RecentSongItemPlaceholder(
                                 song = song,
-                                onClick = { onSongClick(song) },
+                                onClick = { onSongClick(state.songs, song) },
                                 onLikeClick = { viewModel.onIntent(RecentSongsIntent.ToggleLike(song.id)) }
                             )
                         }
