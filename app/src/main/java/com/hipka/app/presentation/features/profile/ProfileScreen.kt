@@ -1,5 +1,6 @@
 package com.hipka.app.presentation.features.profile
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -196,7 +198,7 @@ private fun ProfileContent(
             onUpgradeClick = onUpgradePremium
         )
 
-        // 👈 اصلاح فاصله منطقی و استاندارد
+        // اصلاح فاصله منطقی و استاندارد
         Spacer(Modifier.height(HipkaTheme.dimens.spaceL))
 
         // دکمه سوییچ کاربر دمو / خروج
@@ -260,8 +262,8 @@ private fun UserAvatar(user: User, size: Dp = 40.dp) {
             else -> R.drawable.avatar_male // عکس دیفالت در صورت خالی بودن
         }
 
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = drawableRes),
+        Image(
+            painter = painterResource(id = drawableRes),
             contentDescription = user.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier

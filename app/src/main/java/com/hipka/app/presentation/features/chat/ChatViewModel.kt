@@ -48,7 +48,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val myId = sessionManager.currentUserId.first()
             if (myId == null) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "No demo user selected — pick one on the Profile tab.") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = "No demo user selected.") }
                 return@launch
             }
             _uiState.update { it.copy(currentUserId = myId) }
@@ -63,6 +63,16 @@ class ChatViewModel @Inject constructor(
             listenForTyping(myId)
 
             startHybridSyncEngine(myId)
+        }
+    }
+
+    // ✨ قانون طلایی UI: وضعیت پیام هرگز نباید به عقب برگردد
+    private fun isStatusProgressionValid(oldStatus: MessageStatus, newStatus: MessageStatus): Boolean {
+        if (oldStatus == newStatus) return false
+        return when (oldStatus) {
+            MessageStatus.SENDING -> newStatus == MessageStatus.SENT || newStatus == MessageStatus.READ
+            MessageStatus.SENT -> newStatus == MessageStatus.READ
+            MessageStatus.READ -> false
         }
     }
 
@@ -94,13 +104,9 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         runCatching { chatRepository.getConversationHistory(myId, peerUserId) }
             .onSuccess { history ->
-                // ✨ اصلاح وضعیت پیام‌های لودشده از دیتابیس لوکال تا هرگز حالت ساعت نگیرند
-                val sanitizedHistory = history.map { msg ->
-                    if (msg.status == MessageStatus.SENDING) msg.copy(status = MessageStatus.SENT)
-                    else msg
-                }
-                _uiState.update { it.copy(messages = sanitizedHistory, isLoading = false) }
-                resolveSharedSongs(sanitizedHistory.mapNotNull { it.sharedSongId })
+                // تاریخچه بدون هیچ دستکاری خوانده می‌شود (تا پیام‌های ارسال‌نشده ساعت بمانند)
+                _uiState.update { it.copy(messages = history, isLoading = false) }
+                resolveSharedSongs(history.mapNotNull { it.sharedSongId })
             }
             .onFailure { e -> _uiState.update { it.copy(isLoading = false, errorMessage = e.message) } }
     }
@@ -119,20 +125,11 @@ class ChatViewModel @Inject constructor(
                                 freshHistory.forEach { freshMsg ->
                                     val existing = currentMap[freshMsg.id]
                                     if (existing == null) {
-                                        val sanitized = if (freshMsg.status == MessageStatus.SENDING) freshMsg.copy(status = MessageStatus.SENT) else freshMsg
-                                        currentMap[freshMsg.id] = sanitized
+                                        currentMap[freshMsg.id] = freshMsg
                                         hasChanges = true
-                                    } else {
-                                        val isStatusProgression = when {
-                                            existing.status == MessageStatus.SENDING && freshMsg.status != MessageStatus.SENDING -> true
-                                            existing.status == MessageStatus.SENT && freshMsg.status == MessageStatus.READ -> true
-                                            else -> false
-                                        }
-
-                                        if (isStatusProgression) {
-                                            currentMap[freshMsg.id] = existing.copy(status = freshMsg.status)
-                                            hasChanges = true
-                                        }
+                                    } else if (isStatusProgressionValid(existing.status, freshMsg.status)) {
+                                        currentMap[freshMsg.id] = existing.copy(status = freshMsg.status)
+                                        hasChanges = true
                                     }
                                 }
 
@@ -181,15 +178,9 @@ class ChatViewModel @Inject constructor(
                             if (state.messages.any { it.id == incoming.id }) state
                             else state.copy(messages = state.messages + incoming, isPeerTyping = false)
                         }
-
-                        viewModelScope.launch(Dispatchers.IO) {
-                            markPeerMessagesRead(myId)
-                        }
-
+                        viewModelScope.launch(Dispatchers.IO) { markPeerMessagesRead(myId) }
                         if (incoming.sharedSongId != null) {
-                            viewModelScope.launch(Dispatchers.IO) {
-                                resolveSharedSongs(listOf(incoming.sharedSongId))
-                            }
+                            viewModelScope.launch(Dispatchers.IO) { resolveSharedSongs(listOf(incoming.sharedSongId)) }
                         }
                     }
                 }
@@ -202,7 +193,15 @@ class ChatViewModel @Inject constructor(
                 .catch { e -> Log.e("ChatViewModel", "Error in status updates flow: ${e.message}") }
                 .collect { updated ->
                     _uiState.update { state ->
-                        state.copy(messages = state.messages.map { if (it.id == updated.id) updated else it })
+                        state.copy(
+                            messages = state.messages.map { existing ->
+                                if (existing.id == updated.id && isStatusProgressionValid(existing.status, updated.status)) {
+                                    updated
+                                } else {
+                                    existing
+                                }
+                            }
+                        )
                     }
                 }
         }
@@ -218,7 +217,6 @@ class ChatViewModel @Inject constructor(
 
     private fun onDraftChanged(text: String) {
         _uiState.update { it.copy(draftText = text) }
-
         val myId = _uiState.value.currentUserId
         if (myId.isEmpty()) return
 
@@ -240,9 +238,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun shareSong(song: Song) {
-        _uiState.update { state ->
-            state.copy(sharedSongs = state.sharedSongs + (song.id to song))
-        }
+        _uiState.update { state -> state.copy(sharedSongs = state.sharedSongs + (song.id to song)) }
         sendMessage(text = song.title, sharedSongId = song.id)
         _uiState.update { it.copy(isSongPickerOpen = false) }
     }
@@ -261,6 +257,7 @@ class ChatViewModel @Inject constructor(
         }
 
         val generatedId = UUID.randomUUID().toString()
+        // پیام فوراً در UI با حالت ارسال (SENDING) اضافه می‌شود
         val pendingMessage = Message(
             id = generatedId,
             senderId = myId,
@@ -290,21 +287,18 @@ class ChatViewModel @Inject constructor(
             }.onSuccess { sent ->
                 _uiState.update { state ->
                     state.copy(
-                        messages = state.messages.map {
-                            if (it.id == generatedId) sent else it
+                        messages = state.messages.map { existing ->
+                            if (existing.id == generatedId) {
+                                if (isStatusProgressionValid(existing.status, sent.status)) sent else existing
+                            } else existing
                         }
                     )
                 }
                 sharedSongId?.let { resolveSharedSongs(listOf(it)) }
             }.onFailure { e ->
                 Log.e("ChatViewModel", "Failed to send message online: ${e.message}")
-                _uiState.update { state ->
-                    state.copy(
-                        messages = state.messages.map {
-                            if (it.id == generatedId) it.copy(status = MessageStatus.SENT) else it
-                        }
-                    )
-                }
+                // ✨ در صورت قطع بودن اینترنت، خطای شبکه رخ می‌دهد.
+                // پیام بدون دستکاری، در حالت SENDING در UI می‌ماند.
             }
         }
     }
