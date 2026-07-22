@@ -24,9 +24,13 @@ import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -58,6 +62,7 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import com.hipka.app.presentation.common.CoverImage
 import com.hipka.app.R
+import com.hipka.app.domain.model.RepeatMode
 import com.hipka.app.domain.model.Song
 import com.hipka.app.presentation.theme.HipkaTheme
 import kotlinx.coroutines.Dispatchers
@@ -228,9 +233,15 @@ private fun NowPlayingContent(
             }
 
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceL)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                ShuffleButton(
+                    isEnabled = uiState.isShuffleEnabled,
+                    onClick = { onIntent(PlayerIntent.ToggleShuffle) }
+                )
+
                 IconButton(onClick = { onIntent(PlayerIntent.SkipPrevious) }) {
                     Icon(
                         imageVector = Icons.Filled.SkipPrevious,
@@ -243,13 +254,21 @@ private fun NowPlayingContent(
                     onClick = { onIntent(PlayerIntent.TogglePlayPause) },
                     modifier = Modifier.size(72.dp)
                 ) {
-                    Icon(
-                        imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = stringResource(
-                            id = if (uiState.isPlaying) R.string.player_pause_cd else R.string.player_play_cd
-                        ),
-                        modifier = Modifier.size(36.dp)
-                    )
+                    if (uiState.isBuffering) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp,
+                            color = LocalContentColor.current
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(
+                                id = if (uiState.isPlaying) R.string.player_pause_cd else R.string.player_play_cd
+                            ),
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
 
                 IconButton(onClick = { onIntent(PlayerIntent.SkipNext) }) {
@@ -259,6 +278,11 @@ private fun NowPlayingContent(
                         modifier = Modifier.size(36.dp)
                     )
                 }
+
+                RepeatButton(
+                    repeatMode = uiState.repeatMode,
+                    onClick = { onIntent(PlayerIntent.CycleRepeatMode) }
+                )
             }
 
             Row(
@@ -278,6 +302,40 @@ private fun NowPlayingContent(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ShuffleButton(isEnabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.Filled.Shuffle,
+            contentDescription = stringResource(
+                id = if (isEnabled) R.string.player_shuffle_on_cd else R.string.player_shuffle_off_cd
+            ),
+            tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun RepeatButton(repeatMode: RepeatMode, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = if (repeatMode == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+            contentDescription = stringResource(
+                id = when (repeatMode) {
+                    RepeatMode.OFF -> R.string.player_repeat_off_cd
+                    RepeatMode.ALL -> R.string.player_repeat_all_cd
+                    RepeatMode.ONE -> R.string.player_repeat_one_cd
+                }
+            ),
+            tint = if (repeatMode == RepeatMode.OFF) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.primary
+            }
+        )
     }
 }
 

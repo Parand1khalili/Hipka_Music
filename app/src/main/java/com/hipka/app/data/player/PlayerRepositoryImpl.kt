@@ -10,7 +10,10 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.hipka.app.R
+import com.hipka.app.core.network.NetworkMonitor
 import com.hipka.app.domain.model.PlaybackProgress
+import com.hipka.app.domain.model.RepeatMode
 import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.PlayerRepository
 import com.hipka.app.service.PlaybackService
@@ -43,9 +46,13 @@ private const val SLEEP_TIMER_TICK_MS = 1000L
 private const val MAX_IO_ERROR_RETRIES = 2
 private const val RETRY_BACKOFF_MS = 800L
 
+// مدت انتظار بعد از قطع اینترنت قبل از نمایش خطای «آفلاین هستید» به کاربر
+private const val OFFLINE_ERROR_TIMEOUT_MS = 5000L
+
 @Singleton
 class PlayerRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val networkMonitor: NetworkMonitor
 ) : PlayerRepository {
 
     private var mediaController: MediaController? = null
@@ -76,9 +83,55 @@ class PlayerRepositoryImpl @Inject constructor(
     private val _playbackSpeed = MutableStateFlow(1f)
     override val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
+    private val _isShuffleEnabled = MutableStateFlow(false)
+    override val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
+    override val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
+
+    private val _isBuffering = MutableStateFlow(false)
+    override val isBuffering: StateFlow<Boolean> = _isBuffering.asStateFlow()
+
+    // آخرین وضعیت شناخته‌شده اتصال اینترنت و اینکه آیا کاربر خواسته پخش انجام شود
+    // (چه در حال پخش باشد چه هنوز منتظر بافر/شبکه)؛ این دو با هم تعیین می‌کنند که
+    // آیا باید لودینگ روی دکمه پخش نشان داده شود یا خطای «آفلاین هستید» بعد از چند ثانیه
+    private var isNetworkOnline = true
+    private var desiredPlaying = false
+    private var offlineWatchdogJob: Job? = null
+
     // شمارنده تلاش مجدد برای هر آیتم پخش، جدا نگه داشته می‌شود تا آهنگ بعدی از صفر شروع کند
     private var ioRetryCount = 0
     private var ioRetryMediaId: String? = null
+
+    init {
+        repositoryScope.launch {
+            networkMonitor.isOnline.collect { online ->
+                isNetworkOnline = online
+                evaluateNetworkPlaybackState()
+            }
+        }
+    }
+
+    private fun evaluateNetworkPlaybackState() {
+        if (desiredPlaying && !_isPlaying.value) {
+            if (!isNetworkOnline) {
+                _isBuffering.value = true
+                if (offlineWatchdogJob?.isActive != true) {
+                    offlineWatchdogJob = repositoryScope.launch {
+                        delay(OFFLINE_ERROR_TIMEOUT_MS)
+                        if (desiredPlaying && !_isPlaying.value && !isNetworkOnline) {
+                            _isBuffering.value = false
+                            _playbackErrors.tryEmit(context.getString(R.string.player_offline_error))
+                        }
+                    }
+                }
+            }
+        } else {
+            offlineWatchdogJob?.cancel()
+            offlineWatchdogJob = null
+            _isBuffering.value = false
+        }
+    }
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -88,12 +141,21 @@ class PlayerRepositoryImpl @Inject constructor(
                 ioRetryCount = 0
                 ioRetryMediaId = null
             }
+            evaluateNetworkPlaybackState()
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             _currentSong.value = mediaItem?.mediaId?.let { queuedSongsById[it] }
             ioRetryCount = 0
             ioRetryMediaId = null
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            _isShuffleEnabled.value = shuffleModeEnabled
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            _repeatMode.value = repeatMode.toDomainRepeatMode()
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -202,6 +264,7 @@ class PlayerRepositoryImpl @Inject constructor(
         queuedSongsById = songs.associateBy { it.id }
         val safeStartIndex = startIndex.coerceIn(songs.indices)
 
+        desiredPlaying = true
         controller().apply {
             volume = 0f
             setMediaItems(songs.map { it.toMediaItem() }, safeStartIndex, 0L)
@@ -209,14 +272,34 @@ class PlayerRepositoryImpl @Inject constructor(
             play()
         }
         _currentSong.value = songs[safeStartIndex]
+        evaluateNetworkPlaybackState()
     }
 
     override suspend fun pause() {
+        desiredPlaying = false
         controller().pause()
+        evaluateNetworkPlaybackState()
     }
 
     override suspend fun resume() {
+        desiredPlaying = true
         controller().play()
+        evaluateNetworkPlaybackState()
+    }
+
+    override suspend fun stop() {
+        desiredPlaying = false
+        offlineWatchdogJob?.cancel()
+        offlineWatchdogJob = null
+        mediaController?.apply {
+            stop()
+            clearMediaItems()
+        }
+        queuedSongsById = emptyMap()
+        _currentSong.value = null
+        _isPlaying.value = false
+        _progress.value = PlaybackProgress()
+        _isBuffering.value = false
     }
 
     override suspend fun skipToNext() {
@@ -258,6 +341,28 @@ class PlayerRepositoryImpl @Inject constructor(
         controller().setPlaybackSpeed(speed)
         _playbackSpeed.value = speed
     }
+
+    override suspend fun setShuffleEnabled(enabled: Boolean) {
+        controller().shuffleModeEnabled = enabled
+        _isShuffleEnabled.value = enabled
+    }
+
+    override suspend fun setRepeatMode(mode: RepeatMode) {
+        controller().repeatMode = mode.toPlayerRepeatMode()
+        _repeatMode.value = mode
+    }
+}
+
+private fun Int.toDomainRepeatMode(): RepeatMode = when (this) {
+    Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+    Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+    else -> RepeatMode.OFF
+}
+
+private fun RepeatMode.toPlayerRepeatMode(): Int = when (this) {
+    RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+    RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+    RepeatMode.OFF -> Player.REPEAT_MODE_OFF
 }
 
 private fun Song.toMediaItem(): MediaItem {

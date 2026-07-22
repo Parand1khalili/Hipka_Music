@@ -110,10 +110,19 @@ fun HipkaNavGraph(
                                 song = song,
                                 isPlaying = playerUiState.isPlaying,
                                 onTogglePlayPause = { playerViewModel.onIntent(PlayerIntent.TogglePlayPause) },
+                                isBuffering = playerUiState.isBuffering,
+                                isShuffleEnabled = playerUiState.isShuffleEnabled,
+                                repeatMode = playerUiState.repeatMode,
+                                onToggleShuffle = { playerViewModel.onIntent(PlayerIntent.ToggleShuffle) },
+                                onCycleRepeatMode = { playerViewModel.onIntent(PlayerIntent.CycleRepeatMode) },
                                 onSkipNext = { playerViewModel.onIntent(PlayerIntent.SkipNext) },
                                 onSkipPrevious = { playerViewModel.onIntent(PlayerIntent.SkipPrevious) },
+                                onClose = { playerViewModel.onIntent(PlayerIntent.Stop) },
                                 onClick = { navController.navigate(Screen.NowPlaying.route) },
-                                modifier = Modifier.padding(horizontal = HipkaTheme.dimens.spaceS)
+                                modifier = Modifier.padding(
+                                    horizontal = HipkaTheme.dimens.spaceS,
+                                    vertical = HipkaTheme.dimens.spaceS
+                                )
                             )
                         }
                     }

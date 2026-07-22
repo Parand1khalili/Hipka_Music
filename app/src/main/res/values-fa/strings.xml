@@ -40,6 +40,13 @@
     <string name="player_sleep_timer_off">خاموش کردن</string>
     <string name="player_like_cd">پسندیدن</string>
     <string name="player_unlike_cd">لغو پسندیدن</string>
+    <string name="player_close_cd">بستن پلیر</string>
+    <string name="player_shuffle_on_cd">پخش تصادفی روشن</string>
+    <string name="player_shuffle_off_cd">پخش تصادفی خاموش</string>
+    <string name="player_repeat_off_cd">تکرار خاموش</string>
+    <string name="player_repeat_all_cd">تکرار همه</string>
+    <string name="player_repeat_one_cd">تکرار یک آهنگ</string>
+    <string name="player_offline_error">آفلاین هستید</string>
 
     <!-- Search screen -->
     <string name="search_hint">جستجوی آهنگ یا خواننده...</string>
