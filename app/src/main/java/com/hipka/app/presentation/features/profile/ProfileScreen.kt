@@ -240,12 +240,33 @@ private fun PremiumCard(isPremium: Boolean, isProcessing: Boolean, onUpgradeClic
 
 @Composable
 private fun UserAvatar(user: User, size: Dp = 40.dp) {
-    AsyncImage(
-        model = user.avatarUrl,
-        contentDescription = user.name,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-    )
+    val avatarUrl = user.avatarUrl
+
+    // ۱. اگر لینک اینترنتی بود از AsyncImage استفاده کن
+    if (!avatarUrl.isNullOrBlank() && avatarUrl.startsWith("http")) {
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = user.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+        )
+    } else {
+        // ۲. اگر نام فایل لوکال بود، عکس مربوطه را از drawable بخوان
+        val drawableRes = when (avatarUrl) {
+            "avatar_female" -> R.drawable.avatar_female
+            "avatar_male" -> R.drawable.avatar_male
+            else -> R.drawable.avatar_male // عکس دیفالت در صورت خالی بودن
+        }
+
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = drawableRes),
+            contentDescription = user.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+        )
+    }
 }

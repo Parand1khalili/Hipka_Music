@@ -7,6 +7,7 @@ data class AuthUiState(
     val username: String = "",        // نام کاربری اختصاصی
     val email: String = "",           // آدرس ایمیل
     val password: String = "",
+    val gender: String = "male",
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -21,6 +22,7 @@ sealed interface AuthIntent {
     data class OnUsernameChanged(val username: String) : AuthIntent
     data class OnEmailChanged(val email: String) : AuthIntent
     data class OnPasswordChanged(val password: String) : AuthIntent
+    data class OnGenderChanged(val gender: String) : AuthIntent
     data object TogglePasswordVisibility : AuthIntent
     data class ChangeLanguage(val languageCode: String) : AuthIntent
     data object Submit : AuthIntent

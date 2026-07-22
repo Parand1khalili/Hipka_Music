@@ -60,7 +60,7 @@ fun AuthScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        // ۱. نوار انتخاب زبان (بدون همپوشانی و کاملاً کلیک‌پذیر)
+        // ۱. نوار انتخاب زبان
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -167,6 +167,38 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
                 )
+
+                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+
+                // انتخاب جنسیت (اضافه‌شده برای آواتار دیفالت)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text(
+                        text = if (isPersian) "جنسیت:" else "Gender:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    FilterChip(
+                        selected = uiState.gender == "male",
+                        onClick = { viewModel.onIntent(AuthIntent.OnGenderChanged("male")) },
+                        label = { Text(if (isPersian) "مرد" else "Male") },
+                        shape = RoundedCornerShape(16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    FilterChip(
+                        selected = uiState.gender == "female",
+                        onClick = { viewModel.onIntent(AuthIntent.OnGenderChanged("female")) },
+                        label = { Text(if (isPersian) "زن" else "Female") },
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))

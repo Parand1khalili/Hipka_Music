@@ -22,7 +22,8 @@ interface UserRepository {
         name: String,
         username: String = "",
         email: String,
-        password: String
+        password: String,
+        gender: String = "male"
     ): Result<User>
     suspend fun logout()
     fun isLoggedIn(): Flow<Boolean>

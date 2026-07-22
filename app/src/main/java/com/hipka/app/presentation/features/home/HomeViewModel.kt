@@ -5,20 +5,22 @@ import androidx.lifecycle.viewModelScope
 import com.hipka.app.domain.model.DataSourceState
 import com.hipka.app.domain.repository.PlaylistRepository
 import com.hipka.app.domain.repository.SongRepository
+import com.hipka.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val songRepository: SongRepository,
-    private val playlistRepository: PlaylistRepository
+    private val playlistRepository: PlaylistRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -26,6 +28,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadHomeData()
+        observeCurrentUser()
     }
 
     fun onIntent(intent: HomeIntent) {
@@ -34,13 +37,37 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun observeCurrentUser() {
+        viewModelScope.launch {
+            userRepository.getCurrentUserId().collect { userId ->
+                if (!userId.isNullOrBlank()) {
+                    fetchUser(userId)
+                } else {
+                    _uiState.update { it.copy(currentUser = null) }
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchUser(userId: String) {
+        val user = runCatching { userRepository.getUserById(userId) }.getOrNull()
+        if (user != null) {
+            _uiState.update { it.copy(currentUser = user) }
+        }
+    }
+
     private fun loadHomeData() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-
-        // پلی‌لیست‌ها و آهنگ‌ها مستقل از هم لود می‌شوند تا اگر یکی (مثلاً در حالت
-        // آفلاین) شکست خورد، دیگری همچنان نمایش داده شود.
         loadPlaylists()
         loadSongs()
+
+        // به‌روزرسانی مجدد اطلاعات کاربر در زمان رفرش
+        viewModelScope.launch {
+            val userId = userRepository.getCurrentUserId().firstOrNull()
+            if (!userId.isNullOrBlank()) {
+                fetchUser(userId)
+            }
+        }
     }
 
     private fun loadPlaylists() {
@@ -66,14 +93,8 @@ class HomeViewModel @Inject constructor(
                 }
                 .collect { result ->
                     val allSongs = result.songs
-
-                    // 1. Featured Today: Take the top 3 items
                     val carousel = allSongs.take(3)
-
-                    // 2. Popular: Sort by play count descending, and take the top 5
                     val popular = allSongs.sortedByDescending { it.playCount }.take(5)
-
-                    // 3. New Releases: Sort by release date descending (newest first), and take the top 5
                     val newReleases = allSongs.sortedByDescending { it.releaseDate }.take(5)
 
                     _uiState.update {

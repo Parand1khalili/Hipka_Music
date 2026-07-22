@@ -2,6 +2,7 @@ package com.hipka.app.presentation.features.home
 
 import com.hipka.app.domain.model.Playlist
 import com.hipka.app.domain.model.Song
+import com.hipka.app.domain.model.User
 
 data class HomeUiState(
     val carouselSongs: List<Song> = emptyList(),
@@ -9,6 +10,7 @@ data class HomeUiState(
     val newReleases: List<Song> = emptyList(),
     val globalPlaylists: List<Playlist> = emptyList(),
     val localPlaylists: List<Playlist> = emptyList(),
+    val currentUser: User? = null,
     val isLoading: Boolean = true,
     /** آفلاین هستیم و محتوای نمایش‌داده‌شده از کش محلی می‌آید */
     val isShowingCachedData: Boolean = false,
