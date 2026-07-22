@@ -1,5 +1,6 @@
 package com.hipka.app.presentation.features.auth
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -168,37 +169,13 @@ fun AuthScreen(
                     shape = RoundedCornerShape(HipkaTheme.dimens.cornerM)
                 )
 
-                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+                Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
 
-                // انتخاب جنسیت (اضافه‌شده برای آواتار دیفالت)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Text(
-                        text = if (isPersian) "جنسیت:" else "Gender:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    FilterChip(
-                        selected = uiState.gender == "male",
-                        onClick = { viewModel.onIntent(AuthIntent.OnGenderChanged("male")) },
-                        label = { Text(if (isPersian) "مرد" else "Male") },
-                        shape = RoundedCornerShape(16.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    FilterChip(
-                        selected = uiState.gender == "female",
-                        onClick = { viewModel.onIntent(AuthIntent.OnGenderChanged("female")) },
-                        label = { Text(if (isPersian) "زن" else "Female") },
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                }
+git                 GenderSelectionSection(
+                    selectedGender = uiState.gender,
+                    isPersian = isPersian,
+                    onGenderSelected = { viewModel.onIntent(AuthIntent.OnGenderChanged(it)) }
+                )
             }
 
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
@@ -302,6 +279,87 @@ fun AuthScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+// کامپوننت مدرن انتخاب جنسیت
+@Composable
+private fun GenderSelectionSection(
+    selectedGender: String,
+    isPersian: Boolean,
+    onGenderSelected: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        RequiredLabel(text = if (isPersian) "جنسیت" else "Gender")
+        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceXS))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(HipkaTheme.dimens.spaceS)
+        ) {
+            GenderOptionCard(
+                title = if (isPersian) "مرد" else "Male",
+                isSelected = selectedGender == "male",
+                onClick = { onGenderSelected("male") },
+                modifier = Modifier.weight(1f)
+            )
+            GenderOptionCard(
+                title = if (isPersian) "زن" else "Female",
+                isSelected = selectedGender == "female",
+                onClick = { onGenderSelected("female") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun GenderOptionCard(
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    }
+    val borderColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+    }
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(HipkaTheme.dimens.cornerM),
+        color = backgroundColor,
+        border = BorderStroke(1.5.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = HipkaTheme.dimens.spaceS),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            RadioButton(
+                selected = isSelected,
+                onClick = null,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = MaterialTheme.colorScheme.primary
+                )
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                ),
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

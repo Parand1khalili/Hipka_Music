@@ -1,6 +1,7 @@
 package com.hipka.app.presentation.features.auth
 
 import android.util.Patterns
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hipka.app.core.locale.LocaleManager
@@ -18,23 +19,56 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val settingsDataStore: SettingsDataStore
+    private val settingsDataStore: SettingsDataStore,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AuthUiState())
+    private val _uiState = MutableStateFlow(
+        AuthUiState(
+            isLoginMode = savedStateHandle["isLoginMode"] ?: true,
+            loginIdentifier = savedStateHandle["loginIdentifier"] ?: "",
+            name = savedStateHandle["name"] ?: "",
+            username = savedStateHandle["username"] ?: "",
+            email = savedStateHandle["email"] ?: "",
+            password = savedStateHandle["password"] ?: "",
+            gender = savedStateHandle["gender"] ?: "male"
+        )
+    )
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun onIntent(intent: AuthIntent) {
         when (intent) {
-            AuthIntent.ToggleAuthMode -> _uiState.update {
-                it.copy(isLoginMode = !it.isLoginMode, errorMessage = null, isOfflineError = false)
+            AuthIntent.ToggleAuthMode -> {
+                val newMode = !_uiState.value.isLoginMode
+                savedStateHandle["isLoginMode"] = newMode
+                _uiState.update {
+                    it.copy(isLoginMode = newMode, errorMessage = null, isOfflineError = false)
+                }
             }
-            is AuthIntent.OnLoginIdentifierChanged -> _uiState.update { it.copy(loginIdentifier = intent.identifier) }
-            is AuthIntent.OnNameChanged -> _uiState.update { it.copy(name = intent.name) }
-            is AuthIntent.OnUsernameChanged -> _uiState.update { it.copy(username = intent.username) }
-            is AuthIntent.OnEmailChanged -> _uiState.update { it.copy(email = intent.email) }
-            is AuthIntent.OnPasswordChanged -> _uiState.update { it.copy(password = intent.password) }
-            is AuthIntent.OnGenderChanged -> _uiState.update { it.copy(gender = intent.gender) }
+            is AuthIntent.OnLoginIdentifierChanged -> {
+                savedStateHandle["loginIdentifier"] = intent.identifier
+                _uiState.update { it.copy(loginIdentifier = intent.identifier) }
+            }
+            is AuthIntent.OnNameChanged -> {
+                savedStateHandle["name"] = intent.name
+                _uiState.update { it.copy(name = intent.name) }
+            }
+            is AuthIntent.OnUsernameChanged -> {
+                savedStateHandle["username"] = intent.username
+                _uiState.update { it.copy(username = intent.username) }
+            }
+            is AuthIntent.OnEmailChanged -> {
+                savedStateHandle["email"] = intent.email
+                _uiState.update { it.copy(email = intent.email) }
+            }
+            is AuthIntent.OnPasswordChanged -> {
+                savedStateHandle["password"] = intent.password
+                _uiState.update { it.copy(password = intent.password) }
+            }
+            is AuthIntent.OnGenderChanged -> {
+                savedStateHandle["gender"] = intent.gender
+                _uiState.update { it.copy(gender = intent.gender) }
+            }
             AuthIntent.TogglePasswordVisibility -> _uiState.update {
                 it.copy(isPasswordVisible = !it.isPasswordVisible)
             }
@@ -67,8 +101,6 @@ class AuthViewModel @Inject constructor(
                 return
             }
         } else {
-
-            // اعتبارسنجی ثبت‌نام
             if (state.name.isBlank()) {
                 val error = if (isPersian) "لطفاً نام و نام خانوادگی خود را وارد کنید" else "Please enter your full name"
                 _uiState.update { it.copy(errorMessage = error, isOfflineError = false) }
@@ -97,7 +129,13 @@ class AuthViewModel @Inject constructor(
             val result = if (state.isLoginMode) {
                 userRepository.login(state.loginIdentifier.trim(), state.password)
             } else {
-                userRepository.register(name = state.name.trim(), username = state.username.trim(), email = state.email.trim(),password = state.password, gender = state.gender)
+                userRepository.register(
+                    name = state.name.trim(),
+                    username = state.username.trim(),
+                    email = state.email.trim(),
+                    password = state.password,
+                    gender = state.gender
+                )
             }
 
             result.fold(
