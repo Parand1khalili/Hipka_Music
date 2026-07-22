@@ -166,7 +166,6 @@ fun HipkaNavGraph(
                 )
             }
 
-            // --- صفحه اختصاصی پروفایل هنرمند ---
             composable(
                 route = Screen.ArtistDetail.route,
                 arguments = listOf(
