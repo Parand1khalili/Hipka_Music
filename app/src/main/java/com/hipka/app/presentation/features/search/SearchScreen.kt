@@ -175,6 +175,17 @@ fun SearchScreen(
                 }
             }
 
+            // آفلاین: علت واقعی خالی بودن نتایج، نبود اینترنت است نه نبود نتیجه
+            uiState.hasSearchedBefore && uiState.isOffline -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(id = R.string.offline_search_unavailable),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             uiState.hasSearchedBefore && uiState.searchResults.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(

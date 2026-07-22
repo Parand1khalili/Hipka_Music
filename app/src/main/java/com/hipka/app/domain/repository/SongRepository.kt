@@ -2,10 +2,14 @@ package com.hipka.app.domain.repository
 
 import com.hipka.app.domain.model.Artist
 import com.hipka.app.domain.model.Song
+import com.hipka.app.domain.model.SongsResult
 import kotlinx.coroutines.flow.Flow
 
 interface SongRepository {
     fun getSongs(): Flow<List<Song>>
+
+    /** مثل getSongs اما مشخص می‌کند داده از سرور آمده یا از کش آفلاین */
+    fun getSongsWithSource(): Flow<SongsResult>
     suspend fun getSongById(id: String): Song?
     suspend fun searchSongs(query: String): List<Song>
 

@@ -65,6 +65,8 @@ import coil.compose.AsyncImage
 import com.hipka.app.R
 import com.hipka.app.domain.model.Playlist
 import com.hipka.app.domain.model.Song
+import com.hipka.app.presentation.common.OfflineBanner
+import com.hipka.app.presentation.common.OfflineEmptyState
 import com.hipka.app.presentation.theme.HipkaTheme
 import kotlinx.coroutines.delay
 
@@ -80,6 +82,7 @@ fun HomeScreen(
     onLikeClick: (Song) -> Unit,
     onPlaylistClick: (String) -> Unit,
     onNavigateToSettings: () -> Unit, // ✨ اضافه شدن اتصال به تنظیمات
+    onGoToDownloads: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { onRefresh() }
@@ -94,6 +97,13 @@ fun HomeScreen(
             Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = uiState.errorMessage, color = MaterialTheme.colorScheme.error)
             }
+        }
+        // آفلاین و بدون کش: به جای «نتیجه‌ای یافت نشد» پیام درست آفلاین را نشان می‌دهیم
+        uiState.isOfflineWithNoCache -> {
+            OfflineEmptyState(
+                onGoToDownloads = onGoToDownloads,
+                modifier = modifier
+            )
         }
         uiState.carouselSongs.isEmpty() && uiState.popularSongs.isEmpty() && uiState.newReleases.isEmpty() -> {
             Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -112,6 +122,11 @@ fun HomeScreen(
             ) {
                 // 1. Top App Bar همراه با لوگوی سفارشی و اکشن تنظیمات
                 item { HomeTopBar(onNavigateToSettings = onNavigateToSettings) }
+
+                // نوار اطلاع‌رسانی: محتوای زیر از کش آفلاین می‌آید
+                if (uiState.isShowingCachedData) {
+                    item { OfflineBanner() }
+                }
 
                 item { Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS)) }
 

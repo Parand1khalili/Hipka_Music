@@ -8,6 +8,8 @@ data class DownloadsState(
     val isLoading: Boolean = true,
     val songs: List<Song> = emptyList(),
     val sortOrder: DownloadsSortOrder = DownloadsSortOrder.TITLE,
+    /** دانلود آفلاین ویژه کاربران Premium است */
+    val isPremium: Boolean = false,
     val error: String? = null
 )
 

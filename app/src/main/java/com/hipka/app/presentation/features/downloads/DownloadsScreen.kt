@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -76,6 +77,10 @@ fun DownloadsScreen(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.align(Alignment.Center)
                 )
+
+                // کاربر عادی بدون دانلود: به جای حالت خالی عمومی، دلیل واقعی را توضیح می‌دهیم
+                state.songs.isEmpty() && !state.isPremium ->
+                    PremiumOnlyDownloadsState(modifier = Modifier.align(Alignment.Center))
 
                 state.songs.isEmpty() -> EmptyDownloadsState(modifier = Modifier.align(Alignment.Center))
 
@@ -245,6 +250,34 @@ private fun DownloadsHeader(
                 label = { Text(text = stringResource(id = R.string.downloads_sort_by_artist)) }
             )
         }
+    }
+}
+
+@Composable
+private fun PremiumOnlyDownloadsState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(HipkaTheme.dimens.spaceXL),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Filled.WorkspacePremium,
+            contentDescription = null,
+            modifier = Modifier.size(HipkaTheme.dimens.albumCoverS),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
+        Text(
+            text = stringResource(id = R.string.downloads_premium_only_title),
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
+        Text(
+            text = stringResource(id = R.string.downloads_premium_only_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

@@ -2,6 +2,7 @@ package com.hipka.app.presentation.features.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hipka.app.domain.model.DataSourceState
 import com.hipka.app.domain.repository.PlaylistRepository
 import com.hipka.app.domain.repository.SongRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,45 +34,60 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-
     private fun loadHomeData() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
+        // پلی‌لیست‌ها و آهنگ‌ها مستقل از هم لود می‌شوند تا اگر یکی (مثلاً در حالت
+        // آفلاین) شکست خورد، دیگری همچنان نمایش داده شود.
+        loadPlaylists()
+        loadSongs()
+    }
+
+    private fun loadPlaylists() {
         viewModelScope.launch {
-            try {
-                val worldPlaylists = playlistRepository.getPlaylistsByCategory("WORLD")
-                val localPlaylists = playlistRepository.getPlaylistsByCategory("LOCAL")
+            val worldPlaylists = runCatching { playlistRepository.getPlaylistsByCategory("WORLD") }
+                .getOrDefault(emptyList())
+            val localPlaylists = runCatching { playlistRepository.getPlaylistsByCategory("LOCAL") }
+                .getOrDefault(emptyList())
 
-                songRepository.getSongs()
-                    .catch { exception ->
-                        _uiState.update {
-                            it.copy(isLoading = false, errorMessage = exception.message)
-                        }
-                    }
-                    .collect { allSongs ->
-                        // 1. Featured Today: Take the top 3 items
-                        val carousel = allSongs.take(3)
-
-                        // 2. Popular: Sort by play count descending, and take the top 5
-                        val popular = allSongs.sortedByDescending { it.playCount }.take(5)
-
-                        // 3. New Releases: Sort by release date descending (newest first), and take the top 5
-                        val newReleases = allSongs.sortedByDescending { it.releaseDate }.take(5)
-
-                        _uiState.update {
-                            it.copy(
-                                carouselSongs = carousel,
-                                popularSongs = popular,
-                                newReleases = newReleases,
-                                globalPlaylists = worldPlaylists,
-                                localPlaylists = localPlaylists,
-                                isLoading = false
-                            )
-                        }
-                    }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            _uiState.update {
+                it.copy(globalPlaylists = worldPlaylists, localPlaylists = localPlaylists)
             }
+        }
+    }
+
+    private fun loadSongs() {
+        viewModelScope.launch {
+            songRepository.getSongsWithSource()
+                .catch { exception ->
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = exception.message)
+                    }
+                }
+                .collect { result ->
+                    val allSongs = result.songs
+
+                    // 1. Featured Today: Take the top 3 items
+                    val carousel = allSongs.take(3)
+
+                    // 2. Popular: Sort by play count descending, and take the top 5
+                    val popular = allSongs.sortedByDescending { it.playCount }.take(5)
+
+                    // 3. New Releases: Sort by release date descending (newest first), and take the top 5
+                    val newReleases = allSongs.sortedByDescending { it.releaseDate }.take(5)
+
+                    _uiState.update {
+                        it.copy(
+                            carouselSongs = carousel,
+                            popularSongs = popular,
+                            newReleases = newReleases,
+                            isLoading = false,
+                            isShowingCachedData = result.sourceState == DataSourceState.CACHED,
+                            isOfflineWithNoCache = result.sourceState == DataSourceState.UNAVAILABLE,
+                            errorMessage = null
+                        )
+                    }
+                }
         }
     }
 }

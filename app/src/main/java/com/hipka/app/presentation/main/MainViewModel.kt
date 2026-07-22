@@ -19,6 +19,8 @@ data class MainUiState(
     val languageCode: String = LocaleManager.LANGUAGE_ENGLISH,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val isLoggedIn: Boolean = false,
+    /** تا وقتی نشست ذخیره‌شده خوانده نشده، نباید تصمیم بگیریم کاربر لاگین است یا نه */
+    val isSessionChecked: Boolean = false,
     val isLoading: Boolean = true
 )
 
@@ -37,6 +39,16 @@ class MainViewModel @Inject constructor(
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     init {
+        // نشست کاربر در DataStore ذخیره شده است؛ با خواندن آن در استارت‌آپ، کاربر
+        // لازم نیست هر بار (حتی در حالت آفلاین) دوباره لاگین کند.
+        viewModelScope.launch {
+            sessionManager.currentUserId.collect { userId ->
+                _uiState.update {
+                    it.copy(isLoggedIn = !userId.isNullOrBlank(), isSessionChecked = true)
+                }
+            }
+        }
+
         viewModelScope.launch {
             settingsDataStore.settingsFlow.collect { settings ->
                 _uiState.update {

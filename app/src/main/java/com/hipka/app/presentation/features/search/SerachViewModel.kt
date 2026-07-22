@@ -2,6 +2,7 @@ package com.hipka.app.presentation.features.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hipka.app.core.network.NetworkMonitor
 import com.hipka.app.domain.model.Song
 import com.hipka.app.domain.repository.SongRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
@@ -22,7 +24,8 @@ import javax.inject.Inject
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val songRepository: SongRepository
+    private val songRepository: SongRepository,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -46,6 +49,15 @@ class SearchViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = true, errorMessage = null, hasSearchedBefore = true) }
 
                     flow {
+                        // جستجو فقط سمت سرور انجام می‌شود؛ در حالت آفلاین به جای
+                        // «نتیجه‌ای یافت نشد» باید علت واقعی (نبود اینترنت) گفته شود
+                        if (!networkMonitor.isOnline.first()) {
+                            _uiState.update { it.copy(isOffline = true) }
+                            emit(emptyList())
+                            return@flow
+                        }
+
+                        _uiState.update { it.copy(isOffline = false) }
                         val results = songRepository.searchSongs(query)
                         emit(results)
                     }
