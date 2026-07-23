@@ -49,7 +49,6 @@ class ChatRepositoryImpl @Inject constructor(
         coerceInputValues = true
     }
 
-    // ✨ نگه‌داشتن مرجع چنل تایپینگ فعال جهت جلوگیری از disconnect/reconnect مداوم
     private var activeTypingChannel: RealtimeChannel? = null
     private var activeTypingChannelName: String? = null
 
@@ -58,20 +57,55 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getConversationHistory(myUserId: String, peerUserId: String): List<Message> {
-        return try {
-            val sentByMe = messageApi.getConversation(
-                orQuery = "(and(sender_id.eq.$myUserId,receiver_id.eq.$peerUserId))"
-            )
-            val sentByPeer = messageApi.getConversation(
-                orQuery = "(and(sender_id.eq.$peerUserId,receiver_id.eq.$myUserId))"
-            )
-            val merged = (sentByMe + sentByPeer).sortedBy { it.timestamp }
+        val localBeforeSync = messageDao.getConversationOnce(myUserId, peerUserId).associateBy { it.id }
 
-            messageDao.insertMessages(merged.map { it.toEntity() })
-            merged.map { it.toDomain() }
+        try {
+            val sentByMe = messageApi.getConversation(orQuery = "(and(sender_id.eq.$myUserId,receiver_id.eq.$peerUserId))")
+            val sentByPeer = messageApi.getConversation(orQuery = "(and(sender_id.eq.$peerUserId,receiver_id.eq.$myUserId))")
+            val remoteMessages = sentByMe + sentByPeer
+
+            // ✨ محافظت قطعی از دیتابیس لوکال: جلوگیری از دان‌گرید شدن وضعیت (از تیک به ساعت) توسط دیتای قدیمی سرور
+            val safeToInsert = remoteMessages.map { remote ->
+                val local = localBeforeSync[remote.id]
+                if (local != null) {
+                    val rStatus = MessageStatus.fromRaw(remote.status)
+                    val lStatus = MessageStatus.fromRaw(local.status)
+
+                    val finalStatus = when {
+                        lStatus == MessageStatus.READ || rStatus == MessageStatus.READ -> MessageStatus.READ.name
+                        lStatus == MessageStatus.SENT || rStatus == MessageStatus.SENT -> MessageStatus.SENT.name
+                        else -> MessageStatus.SENDING.name
+                    }
+                    remote.toEntity().copy(status = finalStatus)
+                } else {
+                    remote.toEntity()
+                }
+            }
+            messageDao.insertMessages(safeToInsert)
+
+            // ✨ موتور Auto-Resend: پیدا کردن پیام‌های گیرکرده در حالت آفلاین و پوش کردن به سرور
+            val stuckMessages = localBeforeSync.values.filter { it.status == MessageStatus.SENDING.name && it.senderId == myUserId }
+            stuckMessages.forEach { stuck ->
+                try {
+                    val dto = MessageDto(
+                        id = stuck.id, senderId = stuck.senderId, receiverId = stuck.receiverId,
+                        text = stuck.text, status = MessageStatus.SENT.name,
+                        sharedSongId = stuck.sharedSongId, timestamp = stuck.timestamp
+                    )
+                    messageApi.sendMessage(dto)
+                    messageDao.updateStatus(stuck.id, MessageStatus.SENT.name)
+                } catch (e: Exception) {
+                    Log.e("ChatRepo", "Auto-resend failed for ${stuck.id}")
+                }
+            }
         } catch (e: Exception) {
-            messageDao.getConversationOnce(myUserId, peerUserId).map { it.toDomain() }
+            Log.e("ChatRepo", "Offline mode active, returning local database data.")
         }
+
+        // ✨ همیشه پیام‌ها را از دیتابیس لوکال می‌خوانیم تا هیچ پیام آفلاینی غیب نشود
+        return messageDao.getConversationOnce(myUserId, peerUserId)
+            .map { it.toDomain() }
+            .sortedBy { it.timestamp }
     }
 
     override suspend fun sendMessage(
@@ -81,77 +115,65 @@ class ChatRepositoryImpl @Inject constructor(
         text: String,
         sharedSongId: String?
     ): Message {
-        val dto = MessageDto(
-            id = id,
-            senderId = myUserId,
-            receiverId = receiverId,
-            text = text.ifBlank { " " },
-            status = MessageStatus.SENT.name,
-            sharedSongId = sharedSongId?.ifBlank { null },
-            timestamp = System.currentTimeMillis()
+        // ۱. ابتدا پیام را با حالت قطعی SENDING در دیتابیس لوکال ذخیره می‌کنیم
+        val localDto = MessageDto(
+            id = id, senderId = myUserId, receiverId = receiverId,
+            text = text.ifBlank { " " }, status = MessageStatus.SENDING.name,
+            sharedSongId = sharedSongId?.ifBlank { null }, timestamp = System.currentTimeMillis()
         )
-        messageDao.insertMessage(dto.toEntity())
+        messageDao.insertMessage(localDto.toEntity())
 
-        runCatching {
-            messageApi.sendMessage(dto)
-        }.onFailure { e ->
-            Log.e("ChatRepo", "Network error on sendMessage: ${e.message}")
+        // ۲. تلاش می‌کنیم نسخه SENT را به سرور بفرستیم
+        val serverDto = localDto.copy(status = MessageStatus.SENT.name)
+        try {
+            messageApi.sendMessage(serverDto)
+            // ۳. اگر موفق بود، لوکال را یک تیک (SENT) می‌کنیم
+            messageDao.updateStatus(id, MessageStatus.SENT.name)
+            return serverDto.toDomain()
+        } catch (e: Exception) {
+            // ✨ ۴. اگر نت قطع بود، ارور می‌دهد، پیام در دیتابیس همان SENDING می‌ماند
+            Log.e("ChatRepo", "Network error on sendMessage: stays SENDING")
+            throw e
         }
-
-        return dto.toDomain()
     }
 
     override fun observeIncomingMessages(myUserId: String): Flow<Message> = callbackFlow {
         val channel = supabaseClient.channel("messages-inbox-$myUserId")
-
         val changes = channel.postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
             table = "messages"
             filter = "receiver_id=eq.$myUserId"
         }
-
         val collectJob = launch {
             changes.collect { action ->
                 runCatching {
                     val dto = action.decodeRecord<MessageDto>()
                     messageDao.insertMessage(dto.toEntity())
                     trySend(dto.toDomain())
-                }.onFailure { e ->
-                    Log.e("ChatRepo", "Error parsing incoming message: ${e.message}")
-                }
+                }.onFailure { Log.e("ChatRepo", "Error parsing incoming message.") }
             }
         }
-
         channel.subscribe()
-
         awaitClose {
             collectJob.cancel()
-            CoroutineScope(Dispatchers.IO).launch {
-                runCatching { channel.unsubscribe() }
-            }
+            CoroutineScope(Dispatchers.IO).launch { runCatching { channel.unsubscribe() } }
         }
     }
 
     override fun observeSentMessageStatusUpdates(myUserId: String): Flow<Message> = callbackFlow {
         val channel = supabaseClient.channel("messages-sent-status-$myUserId")
-
         val changes = channel.postgresChangeFlow<PostgresAction.Update>(schema = "public") {
             table = "messages"
             filter = "sender_id=eq.$myUserId"
         }
-
         val localJob = launch {
-            localStatusUpdatesFlow
-                .filter { it.senderId == myUserId }
-                .collect { trySend(it) }
+            localStatusUpdatesFlow.filter { it.senderId == myUserId }.collect { trySend(it) }
         }
-
         val collectJob = launch {
             changes.collect { action ->
                 runCatching {
                     val recordJson = action.record
                     val msgId = recordJson["id"]?.toString()?.replace("\"", "")
                     val statusStr = recordJson["status"]?.toString()?.replace("\"", "") ?: "READ"
-
                     if (!msgId.isNullOrEmpty()) {
                         messageDao.updateStatus(msgId, statusStr)
                         val updatedEntity = messageDao.getMessageById(msgId)
@@ -168,74 +190,41 @@ class ChatRepositoryImpl @Inject constructor(
                 }
             }
         }
-
         channel.subscribe()
-
         awaitClose {
             localJob.cancel()
             collectJob.cancel()
-            CoroutineScope(Dispatchers.IO).launch {
-                runCatching { channel.unsubscribe() }
-            }
+            CoroutineScope(Dispatchers.IO).launch { runCatching { channel.unsubscribe() } }
         }
     }
 
     override suspend fun markConversationAsRead(myUserId: String, peerUserId: String) {
-        messageDao.updateStatusForConversation(
-            senderId = peerUserId,
-            receiverId = myUserId,
-            status = MessageStatus.READ.name
-        )
-
-        runCatching {
-            messageApi.markConversationAsRead(
-                senderIdFilter = "eq.$peerUserId",
-                receiverIdFilter = "eq.$myUserId"
-            )
-        }.onFailure { e ->
-            Log.e("ChatRepo", "Error marking as read on remote: ${e.message}")
-        }
-
+        messageDao.updateStatusForConversation(senderId = peerUserId, receiverId = myUserId, status = MessageStatus.READ.name)
+        runCatching { messageApi.markConversationAsRead(senderIdFilter = "eq.$peerUserId", receiverIdFilter = "eq.$myUserId") }
         val conversation = messageDao.getConversationOnce(myUserId, peerUserId)
         conversation.filter { it.senderId == peerUserId && it.status == MessageStatus.READ.name }
-            .forEach { entity ->
-                localStatusUpdatesFlow.emit(entity.toDomain())
-            }
+            .forEach { entity -> localStatusUpdatesFlow.emit(entity.toDomain()) }
     }
 
-    // ✨ ۱. اتصال و سابسکرایب پایدار چنل تایپینگ
     override fun observeTypingStatus(myUserId: String, peerUserId: String): Flow<Boolean> = callbackFlow {
         val chName = typingChannelName(myUserId, peerUserId)
         val channel = getOrCreateTypingChannel(chName)
-
         val collectJob = launch {
             channel.broadcastFlow<TypingPayload>(event = TYPING_EVENT)
                 .filter { it.senderId == peerUserId }
                 .map { it.isTyping }
-                .collect { isTyping ->
-                    Log.d("ChatRepo", "Received typing status: $isTyping")
-                    trySend(isTyping)
-                }
+                .collect { isTyping -> trySend(isTyping) }
         }
-
-        awaitClose {
-            collectJob.cancel()
-        }
+        awaitClose { collectJob.cancel() }
     }
 
-    // ✨ ۲. ارسال سیگنال تایپینگ روی همان کانال فعال و متصل
     override suspend fun sendTypingStatus(myUserId: String, peerUserId: String, isTyping: Boolean) {
         runCatching {
             val chName = typingChannelName(myUserId, peerUserId)
             val channel = getOrCreateTypingChannel(chName)
-
             val payload = TypingPayload(senderId = myUserId, isTyping = isTyping)
             val jsonPayload = jsonFormatter.encodeToJsonElement(payload).jsonObject
-
-            Log.d("ChatRepo", "Broadcasting typing: $isTyping on $chName")
             channel.broadcast(event = TYPING_EVENT, message = jsonPayload)
-        }.onFailure { e ->
-            Log.e("ChatRepo", "Error in sendTypingStatus: ${e.message}")
         }
     }
 
@@ -250,26 +239,8 @@ class ChatRepositoryImpl @Inject constructor(
         return channel
     }
 
-    private fun typingChannelName(userIdA: String, userIdB: String): String =
-        "typing-" + listOf(userIdA, userIdB).sorted().joinToString("-")
+    private fun typingChannelName(userIdA: String, userIdB: String): String = "typing-" + listOf(userIdA, userIdB).sorted().joinToString("-")
 
-    private fun MessageDto.toEntity() = OfflineMessageEntity(
-        id = id,
-        senderId = senderId,
-        receiverId = receiverId,
-        text = text,
-        timestamp = timestamp,
-        status = status,
-        sharedSongId = sharedSongId
-    )
-
-    private fun OfflineMessageEntity.toDomain() = Message(
-        id = id,
-        senderId = senderId,
-        receiverId = receiverId,
-        text = text,
-        status = MessageStatus.fromRaw(status),
-        sharedSongId = sharedSongId,
-        timestamp = timestamp
-    )
+    private fun MessageDto.toEntity() = OfflineMessageEntity(id = id, senderId = senderId, receiverId = receiverId, text = text, timestamp = timestamp, status = status, sharedSongId = sharedSongId)
+    private fun OfflineMessageEntity.toDomain() = Message(id = id, senderId = senderId, receiverId = receiverId, text = text, status = MessageStatus.fromRaw(status), sharedSongId = sharedSongId, timestamp = timestamp)
 }
