@@ -171,7 +171,7 @@ fun AuthScreen(
 
                 Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceM))
 
-git                 GenderSelectionSection(
+                GenderSelectionSection(
                     selectedGender = uiState.gender,
                     isPersian = isPersian,
                     onGenderSelected = { viewModel.onIntent(AuthIntent.OnGenderChanged(it)) }
