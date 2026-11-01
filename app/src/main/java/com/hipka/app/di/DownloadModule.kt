@@ -28,7 +28,9 @@ object DownloadModule {
     fun provideDownloadOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         // فایل‌های صوتی ممکن است بزرگ باشند، پس مهلت خواندن سخت‌گیرانه نیست
-        .readTimeout(5, TimeUnit.MINUTES)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(9, TimeUnit.MINUTES)
+        .followSslRedirects(false)
         .retryOnConnectionFailure(true)
         .followRedirects(true)
         .build()

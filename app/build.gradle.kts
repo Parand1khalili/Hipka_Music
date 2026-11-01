@@ -1,5 +1,5 @@
 import java.util.Properties
-import java.io.FileInputStream
+import java.util.Base64
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,21 +7,31 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    kotlin("plugin.serialization") version "2.0.20" // ✨ برگردانده شد تا نسخه مشخص باشد
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // ۱. خواندن ایمن اطلاعات سوپابیس با کلاس استاندارد Properties
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
-    localProperties.load(FileInputStream(localPropertiesFile))
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
-val supabaseUrl = localProperties.getProperty("supabase.url", "")
-val supabaseKey = localProperties.getProperty("supabase.key", "")
-
-val finalUrl = "\"${supabaseUrl.trim().removeSurrounding("\"")}\""
-val finalKey = "\"${supabaseKey.trim().removeSurrounding("\"")}\""
+fun config(name: String, env: String, fallback: String = "") =
+    providers.environmentVariable(env).orNull ?: localProperties.getProperty(name, fallback)
+fun quoted(value: String) = "\"" + value.trim().removeSurrounding("\"")
+    .replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "").replace("\r", "") + "\""
+val supabaseUrl = config("supabase.url", "SUPABASE_URL", "https://example.supabase.co/")
+val supabaseKey = config("supabase.key", "SUPABASE_KEY", "unconfigured-public-key").trim().removeSurrounding("\"")
+require(supabaseUrl.startsWith("https://")) { "Supabase URL must use HTTPS" }
+require(!supabaseKey.startsWith("sb_secret_")) { "Never embed a Supabase secret key" }
+val keyPayload = supabaseKey.split('.').getOrNull(1)?.let {
+    runCatching { String(Base64.getUrlDecoder().decode(it)) }.getOrDefault("")
+}.orEmpty()
+require(!keyPayload.contains("service_role")) { "Never embed a service-role JWT" }
+val finalUrl = quoted(supabaseUrl.trimEnd('/') + "/")
+val finalKey = quoted(supabaseKey)
+val legacyDemoAuth = config("hipka.legacyDemoAuth", "HIPKA_LEGACY_DEMO_AUTH", "false").toBoolean()
 
 android {
     namespace = "com.hipka.app"
@@ -31,17 +41,21 @@ android {
         applicationId = "com.hipka.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // ۲. ارسال آدرس و کلید سوپابیس به BuildConfig
         buildConfigField("String", "SUPABASE_URL", finalUrl)
         buildConfigField("String", "SUPABASE_KEY", finalKey)
+        buildConfigField("boolean", "LEGACY_DEMO_AUTH", "false")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "LEGACY_DEMO_AUTH", legacyDemoAuth.toString())
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -132,6 +146,6 @@ dependencies {
     // ۹. کلاینت سوپابیس و شبکه Ktor
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.2")
     implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.2")
-    implementation("io.ktor:ktor-client-okhttp:2.3.12")
-    implementation("io.ktor:ktor-client-cio:2.3.12")
+    implementation("io.ktor:ktor-client-okhttp:2.3.13")
+    implementation(platform("io.ktor:ktor-bom:2.3.13"))
 }

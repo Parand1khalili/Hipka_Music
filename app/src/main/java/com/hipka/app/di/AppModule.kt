@@ -29,6 +29,23 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideAudiusApi(): com.hipka.app.data.remote.api.AudiusApi {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                chain.proceed(request.newBuilder().header("User-Agent", "HipkaMusic/1.0").url(request.url.newBuilder()
+                    .addQueryParameter("app_name", "HipkaMusic").build()).build())
+            }.build()
+        return Retrofit.Builder().baseUrl("https://api.audius.co/v1/")
+            .client(client)
+            .addConverterFactory(Json { ignoreUnknownKeys = true; coerceInputValues = true }
+                .asConverterFactory("application/json".toMediaType()))
+            .build().create(com.hipka.app.data.remote.api.AudiusApi::class.java)
+    }
+
+    @Provides
+    @Singleton
     fun provideSettingsDataStore(@ApplicationContext context: Context): SettingsDataStore {
         return SettingsDataStore(context)
     }
@@ -40,6 +57,8 @@ object AppModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
+            .followRedirects(false)
+            .followSslRedirects(false)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("apikey", BuildConfig.SUPABASE_KEY)
@@ -75,6 +94,7 @@ object AppModule {
     @Singleton
     fun provideSongRepository(
         songApi: SongApi,
+        audiusApi: com.hipka.app.data.remote.api.AudiusApi,
         songDao: SongDao,
         searchHistoryDao: SearchHistoryDao,
         networkMonitor: NetworkMonitor,
@@ -82,6 +102,7 @@ object AppModule {
     ): SongRepository {
         return SongRepositoryImpl(
             songApi,
+            audiusApi,
             songDao,
             searchHistoryDao,
             networkMonitor,

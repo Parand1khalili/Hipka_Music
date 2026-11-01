@@ -22,6 +22,7 @@ import javax.inject.Singleton
 
 private const val CACHE_SIZE_BYTES = 300L * 1024 * 1024 // 300MB of streamed audio kept for offline replay
 
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
 @Module
 @InstallIn(SingletonComponent::class)
 object PlayerModule {
@@ -44,7 +45,8 @@ object PlayerModule {
         // DefaultDataSource هم file:// (آهنگ‌های دانلودشده) و هم http(s):// (استریم) را پشتیبانی می‌کند.
         // اگر مستقیم از DefaultHttpDataSource استفاده شود، پخش فایل لوکال با خطای Source شکست می‌خورد.
         val httpFactory = DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
+            .setUserAgent("HipkaMusic/1.0")
+            .setAllowCrossProtocolRedirects(false)
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(15_000)
         val upstreamFactory = DefaultDataSource.Factory(context, httpFactory)
@@ -60,7 +62,6 @@ object PlayerModule {
     }
 
     @Provides
-    @Singleton
     fun provideExoPlayer(
         @ApplicationContext context: Context,
         cacheDataSourceFactory: CacheDataSource.Factory
@@ -77,6 +78,7 @@ object PlayerModule {
             .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(audioAttributes, /* handleAudioFocus= */ true)
             .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
     }
 }

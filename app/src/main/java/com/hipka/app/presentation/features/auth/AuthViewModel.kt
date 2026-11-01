@@ -30,7 +30,7 @@ class AuthViewModel @Inject constructor(
             name = savedStateHandle["name"] ?: "",
             username = savedStateHandle["username"] ?: "",
             email = savedStateHandle["email"] ?: "",
-            password = savedStateHandle["password"] ?: "",
+            password = "",
             gender = savedStateHandle["gender"] ?: "male"
         )
     )
@@ -62,7 +62,6 @@ class AuthViewModel @Inject constructor(
                 _uiState.update { it.copy(email = intent.email) }
             }
             is AuthIntent.OnPasswordChanged -> {
-                savedStateHandle["password"] = intent.password
                 _uiState.update { it.copy(password = intent.password) }
             }
             is AuthIntent.OnGenderChanged -> {
@@ -87,6 +86,7 @@ class AuthViewModel @Inject constructor(
 
     private fun submitAuth() {
         val state = _uiState.value
+        if (state.isLoading) return
         val isPersian = LocaleManager.currentLanguageTag() == LocaleManager.LANGUAGE_PERSIAN
 
         if (state.isLoginMode) {
@@ -140,11 +140,12 @@ class AuthViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                    _uiState.update { it.copy(isLoading = false, isSuccess = true, password = "") }
                 },
                 onFailure = { error ->
                     val isNetworkError = error is IOException
                     val userFriendlyError = when (error.message) {
+                        "AUTH_DEMO_DISABLED" -> if (isPersian) "ورود آزمایشی غیرفعال است؛ راهنمای پیکربندی پروژه را ببینید" else "Legacy demo sign-in is disabled. See the project setup guide."
                         "AUTH_INVALID_CREDENTIALS" -> if (isPersian) "نام کاربری/ایمیل یا رمز عبور اشتباه است" else "Invalid username/email or password"
                         else -> if (isPersian) "خطا در برقراری ارتباط. لطفاً دوباره تلاش کنید" else "Authentication failed. Please try again."
                     }

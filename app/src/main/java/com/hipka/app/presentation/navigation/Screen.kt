@@ -20,7 +20,7 @@ sealed class Screen(val route: String) {
     data object ChatList : Screen("chat_list")
     data object ChatConversation : Screen("chat/{peerUserId}") {
         const val ARG_PEER_USER_ID = "peerUserId"
-        fun createRoute(peerUserId: String) = "chat/$peerUserId"
+        fun createRoute(peerUserId: String) = "chat/${android.net.Uri.encode(peerUserId)}"
     }
 
     companion object {
@@ -28,13 +28,13 @@ sealed class Screen(val route: String) {
     }
 
     object SeeAll : Screen("see_all/{section}") {
-        fun createRoute(section: String) = "see_all/$section"
+        fun createRoute(section: String) = "see_all/${android.net.Uri.encode(section)}"
     }
     data object TopArtists : Screen("top_artists")
     object ArtistDetail : Screen("artist_detail/{artistName}/{imageUrl}") {
         fun createRoute(artistName: String, imageUrl: String): String {
-            val encodedUrl = java.net.URLEncoder.encode(imageUrl, "UTF-8")
-            return "artist_detail/$artistName/$encodedUrl"
+            val encodedUrl = android.net.Uri.encode(imageUrl.ifBlank { " " })
+            return "artist_detail/${android.net.Uri.encode(artistName)}/$encodedUrl"
         }
     }
 }

@@ -308,12 +308,6 @@ private fun HomeTopBar(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             TopBarIconButton(
-                icon = Icons.Default.Notifications,
-                contentDescription = "Notifications",
-                onClick = { /* TODO Notifications */ }
-            )
-            Spacer(modifier = Modifier.width(HipkaTheme.dimens.spaceS))
-            TopBarIconButton(
                 icon = Icons.Default.Settings,
                 contentDescription = "Settings",
                 onClick = onNavigateToSettings

@@ -41,13 +41,13 @@ class PlaylistsViewModel @Inject constructor(
             // پلی‌لیست‌ها هیچ کش محلی ندارند (برخلاف آهنگ‌ها)؛ به جای زدن یک
             // درخواست شبکه‌ای که حتماً شکست می‌خورد و پیام خام نشان می‌دهد،
             // مستقیماً اعلام می‌کنیم که این بخش بدون اینترنت قابل استفاده نیست.
-            val isOnline = runCatching { networkMonitor.isOnline.first() }.getOrDefault(true)
+            val isOnline = com.hipka.app.core.util.coroutineResult { networkMonitor.isOnline.first() }.getOrDefault(true)
             if (!isOnline) {
                 _uiState.update { it.copy(isLoading = false, isOffline = true) }
                 return@launch
             }
 
-            runCatching {
+            com.hipka.app.core.util.coroutineResult {
                 val world = playlistRepository.getPlaylistsByCategory("WORLD")
                 val local = playlistRepository.getPlaylistsByCategory("LOCAL")
                 val myId = sessionManager.currentUserId.first()

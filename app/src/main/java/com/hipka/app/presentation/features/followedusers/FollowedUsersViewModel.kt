@@ -46,7 +46,7 @@ class FollowedUsersViewModel @Inject constructor(
                 return@launch
             }
 
-            runCatching {
+            com.hipka.app.core.util.coroutineResult {
                 coroutineScope {
                     val usersDeferred = async { userRepository.getAllUsers().filterNot { it.id == myId } }
                     val followingDeferred = async { userRepository.getFollowingIds(myId) }
@@ -82,7 +82,7 @@ class FollowedUsersViewModel @Inject constructor(
             }
 
             // ✨ اتصال عملیات فالو و آنفالو به آدرس و جدول واقعی سوپابیس
-            runCatching {
+            com.hipka.app.core.util.coroutineResult {
                 if (wasFollowing) {
                     userRepository.unfollowUser(myId, targetUserId)
                 } else {

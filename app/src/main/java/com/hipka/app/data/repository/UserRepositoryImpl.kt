@@ -18,7 +18,7 @@ class UserRepositoryImpl @Inject constructor(
 ) : UserRepository {
 
     override suspend fun getUserById(id: String): User? =
-        userApi.getUserById(idFilter = "eq.$id").firstOrNull()?.toDomain()
+        if (com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) userApi.getUserById(idFilter = "eq.$id").firstOrNull()?.toDomain() else null
 
     override suspend fun getAllUsers(): List<User> =
         userApi.getAllUsers().map { it.toDomain() }
@@ -44,14 +44,17 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setPremiumStatus(userId: String, isPremium: Boolean) {
-        userApi.updatePremiumStatus(
+        check(com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) { "Premium changes require a trusted backend" }
+        val response = userApi.updatePremiumStatus(
             idFilter = "eq.$userId",
             body = PremiumUpdateDto(isPremium = isPremium)
         )
+        if (!response.isSuccessful) throw retrofit2.HttpException(response)
     }
 
     // ورود با ایمیل یا نام کاربری
     override suspend fun login(emailOrUsername: String, password: String): Result<User> {
+        if (!com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) return Result.failure(IllegalStateException("AUTH_DEMO_DISABLED"))
         return try {
             val cleanIdentifier = emailOrUsername.trim()
             val users = userApi.loginUserOr(
@@ -67,10 +70,12 @@ class UserRepositoryImpl @Inject constructor(
                 Result.failure(Exception("AUTH_INVALID_CREDENTIALS"))
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
     }
     override suspend fun register(name: String, username: String, email: String, password: String, gender: String): Result<User> {
+        if (!com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) return Result.failure(IllegalStateException("AUTH_DEMO_DISABLED"))
         return try {
             val newUserId = UUID.randomUUID().toString()
             val defaultAvatarName = if (gender == "female") "avatar_female" else "avatar_male"
@@ -85,11 +90,11 @@ class UserRepositoryImpl @Inject constructor(
                 createdAt = null
             )
             val createdUsers = userApi.registerUser(newDto)
-            val user = createdUsers.firstOrNull()?.toDomain() ?: newDto.toDomain()
+            val user = createdUsers.firstOrNull()?.toDomain() ?: error("Registration returned no user")
             sessionManager.setCurrentUser(user.id)
             Result.success(user)
         } catch (e: Exception) {
-            android.util.Log.e("REGISTER_ERROR", "Registration failed: ${e.message}")
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
     }

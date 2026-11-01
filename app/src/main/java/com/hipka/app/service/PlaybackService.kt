@@ -32,7 +32,9 @@ class PlaybackService : MediaSessionService() {
             .build()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
+    @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
+        if (controllerInfo.packageName == packageName || controllerInfo.isTrusted) mediaSession else null
 
     override fun onDestroy() {
         mediaSession?.run {

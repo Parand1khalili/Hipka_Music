@@ -5,6 +5,11 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -165,13 +170,13 @@ private fun NowPlayingContent(
     // بدون اسکرول: اندازه کاور و ویژوالایزر بر اساس ارتفاع واقعی صفحه محاسبه می‌شود
     // تا در دستگاه‌های مختلف، کل محتوا بدون نیاز به اسکرول جا شود
     BoxWithConstraints(modifier = modifier) {
-        val coverSize = (maxHeight * 0.3f).coerceIn(120.dp, HipkaTheme.dimens.albumCoverL)
+        val coverSize = (maxHeight * 0.3f).coerceIn(96.dp, HipkaTheme.dimens.albumCoverL).coerceAtMost(maxWidth)
         val visualizerHeight = (HipkaTheme.dimens.visualizerHeight * 0.75f)
 
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)
         ) {
             CoverImage(
                 model = song.coverImageUrl,
@@ -205,12 +210,15 @@ private fun NowPlayingContent(
             )
 
             Column(modifier = Modifier.fillMaxWidth()) {
-                var isDragging by remember { mutableStateOf(false) }
-                var dragPositionMs by remember { mutableLongStateOf(0L) }
+                var isDragging by remember(song.id) { mutableStateOf(false) }
+                var dragPositionMs by remember(song.id) { mutableLongStateOf(0L) }
                 val durationMs = uiState.progress.durationMs.coerceAtLeast(1L)
                 val displayedPositionMs = if (isDragging) dragPositionMs else uiState.progress.positionMs
 
+                val seekDescription = stringResource(R.string.player_seek_position)
                 Slider(
+                    modifier = Modifier.semantics { contentDescription = seekDescription },
+                    enabled = uiState.progress.durationMs > 0,
                     value = displayedPositionMs.toFloat().coerceIn(0f, durationMs.toFloat()),
                     valueRange = 0f..durationMs.toFloat(),
                     onValueChange = {
@@ -467,6 +475,7 @@ private suspend fun extractDominantColor(context: Context, imageUrl: String): Co
     try {
         val request = ImageRequest.Builder(context)
             .data(imageUrl)
+            .size(128)
             .allowHardware(false) // Palette باید بایت‌های واقعی بیت‌مپ را بخواند، نه بافر GPU
             .build()
 
@@ -477,6 +486,7 @@ private suspend fun extractDominantColor(context: Context, imageUrl: String): Co
         val swatch = palette.vibrantSwatch ?: palette.dominantSwatch ?: palette.mutedSwatch
         swatch?.rgb?.let { Color(it) }
     } catch (e: Exception) {
+        if (e is kotlinx.coroutines.CancellationException) throw e
         null
     }
 }

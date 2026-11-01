@@ -14,25 +14,25 @@ import retrofit2.http.Query
 
 interface UserApi {
 
-    @GET("rest/v1/users?select=*")
+    @GET("rest/v1/users?select=id,name,username,avatar_url,is_premium,created_at")
     suspend fun getAllUsers(): List<UserDto>
 
     @GET("rest/v1/users")
     suspend fun getUserById(
         @Query("id") idFilter: String, // pass as "eq.<id>"
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "id,name,username,avatar_url,is_premium,created_at"
     ): List<UserDto>
 
     @GET("rest/v1/users")
     suspend fun searchUsersByName(
         @Query("name") nameFilter: String, // pass as "ilike.*<query>*"
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "id,name,username,avatar_url,is_premium,created_at"
     ): List<UserDto>
 
     @GET("rest/v1/users")
     suspend fun getUsersByIds(
         @Query("id") idInFilter: String, // pass as "in.(id1,id2,...)"
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "id,name,username,avatar_url,is_premium,created_at"
     ): List<UserDto>
 
     // متدهای قبلی لاگین برای حفظ سازگاری با کد بقیه اعضای تیم
@@ -40,7 +40,7 @@ interface UserApi {
     suspend fun loginUser(
         @Query("email") emailFilter: String,
         @Query("password") passwordFilter: String,
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "id,name,username,avatar_url,is_premium,created_at"
     ): List<UserDto>
 
     // متد جدید اختصاصی جهت ورود با ایمیل یا نام کاربری
@@ -48,7 +48,7 @@ interface UserApi {
     suspend fun loginUserOr(
         @Query("or") orFilter: String, // pass as "(email.eq.xyz,name.eq.xyz)"
         @Query("password") passwordFilter: String,
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "id,name,username,avatar_url,is_premium,created_at"
     ): List<UserDto>
 
     @Headers("Prefer: return=representation")
@@ -60,13 +60,13 @@ interface UserApi {
     @GET("rest/v1/user_follows")
     suspend fun getFollowings(
         @Query("follower_id") followerFilter: String, // pass as "eq.<userId>"
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "id,name,username,avatar_url,is_premium,created_at"
     ): List<UserFollowDto>
 
     @GET("rest/v1/user_follows")
     suspend fun getFollowers(
         @Query("following_id") followingFilter: String, // pass as "eq.<userId>"
-        @Query("select") select: String = "*"
+        @Query("select") select: String = "id,name,username,avatar_url,is_premium,created_at"
     ): List<UserFollowDto>
 
     @POST("rest/v1/user_follows")

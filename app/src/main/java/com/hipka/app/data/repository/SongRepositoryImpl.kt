@@ -27,6 +27,7 @@ import com.hipka.app.domain.model.Artist
 
 class SongRepositoryImpl @Inject constructor(
     private val songApi: SongApi,
+    private val audiusApi: com.hipka.app.data.remote.api.AudiusApi,
     private val songDao: SongDao,
     private val searchHistoryDao: SearchHistoryDao,
     private val networkMonitor: NetworkMonitor,
@@ -43,7 +44,7 @@ class SongRepositoryImpl @Inject constructor(
      */
     override fun getSongsWithSource(): Flow<SongsResult> = flow {
         val cached = songDao.getAllCachedSongs().first().map { it.toDomainModel() }.deduplicated()
-        val isOnline = runCatching { networkMonitor.isOnline.first() }.getOrDefault(true)
+        val isOnline = networkMonitor.isOnline.first()
 
         if (cached.isNotEmpty()) {
             // وقتی آنلاین هستیم، کش فقط یک نمایش سریع اولیه است و نباید بنر آفلاین
@@ -64,7 +65,7 @@ class SongRepositoryImpl @Inject constructor(
         }
 
         try {
-            val remoteSongs = songApi.testGetSongs()
+            val remoteSongs = audiusApi.trending().data.mapNotNull { it.toSongDto() }
             val songs = remoteSongs.map { dto ->
                 Song(
                     id = dto.id,
@@ -80,8 +81,12 @@ class SongRepositoryImpl @Inject constructor(
 
             // ذخیره برای دفعه بعدی که کاربر آفلاین است
             songDao.cacheSongs(songs.map { it.toEntity() })
-            emit(SongsResult(songs, DataSourceState.FRESH))
+            val localById = songDao.getAllCachedSongs().first().associateBy { it.id }
+            emit(SongsResult(songs.map { song ->
+                localById[song.id]?.toDomainModel() ?: song
+            }, DataSourceState.FRESH))
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("REPO_ERROR", "Network failed, serving cache. Cause: ${e.message}")
             emit(
                 SongsResult(
@@ -97,14 +102,18 @@ class SongRepositoryImpl @Inject constructor(
         if (localSong != null) {
             return localSong.toDomainModel()
         }
-        return null
+        if (!id.startsWith("audius:")) return null
+        val dto = audiusApi.track(id.removePrefix("audius:")).data?.toSongDto() ?: return null
+        val song = Song(dto.id, dto.title, dto.artistName, dto.coverImageUrl, dto.audioUrl,
+            likesCount = dto.likesCount ?: 0, playCount = dto.playCount ?: 0, releaseDate = dto.releaseDate.orEmpty())
+        songDao.cacheSongs(listOf(song.toEntity()))
+        return song
     }
 
     override suspend fun searchSongs(query: String): List<Song> {
         if (query.isBlank()) return emptyList()
         return try {
-            val orQuery = "(title.ilike.*$query*,artist_name.ilike.*$query*)"
-            val remoteSongs = songApi.searchSongs(orQuery)
+            val remoteSongs = audiusApi.search(query.trim()).data.mapNotNull { it.toSongDto() }
             remoteSongs.map { dto ->
                 Song(
                     id = dto.id,
@@ -118,14 +127,15 @@ class SongRepositoryImpl @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("REPO_ERROR", "Search query failed. Returning empty list.")
-            emptyList()
+            throw e
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getLikedSongs(): Flow<List<Song>> {
-        return sessionManager.currentUserId.flatMapLatest { userId ->
+        return sessionManager.currentUserId.map { it ?: "local-listener" }.flatMapLatest { userId ->
             if (userId.isNullOrBlank()) {
                 flowOf(emptyList())
             } else {
@@ -138,7 +148,7 @@ class SongRepositoryImpl @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getRecentlyPlayedSongs(): Flow<List<Song>> {
-        return sessionManager.currentUserId.flatMapLatest { userId ->
+        return sessionManager.currentUserId.map { it ?: "local-listener" }.flatMapLatest { userId ->
             if (userId.isNullOrBlank()) {
                 flowOf(emptyList())
             } else {
@@ -151,14 +161,14 @@ class SongRepositoryImpl @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeLikedSongIds(): Flow<List<String>> {
-        return sessionManager.currentUserId.flatMapLatest { userId ->
+        return sessionManager.currentUserId.map { it ?: "local-listener" }.flatMapLatest { userId ->
             if (userId.isNullOrBlank()) flowOf(emptyList())
             else songDao.getLikedSongIdsForUser(userId)
         }
     }
 
     override suspend fun toggleAndInsertLike(song: Song) {
-        val currentUserId = sessionManager.currentUserId.first()
+        val currentUserId = sessionManager.currentUserId.first() ?: "local-listener"
         if (currentUserId.isNullOrBlank()) {
             android.util.Log.e("LIKE_SYSTEM", "No user logged in!")
             return
@@ -184,6 +194,7 @@ class SongRepositoryImpl @Inject constructor(
             songDao.deleteUserLike(currentUserId, song.id)
         }
 
+        if (song.id.startsWith("audius:") || currentUserId == "local-listener") return
         try {
             val isOnline = networkMonitor.isOnline.first()
             if (isOnline) {
@@ -203,12 +214,13 @@ class SongRepositoryImpl @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("SUPABASE_SYNC", "Failed to sync like status: ${e.message}")
         }
     }
 
     override suspend fun addToRecentlyPlayed(song: Song) {
-        val currentUserId = sessionManager.currentUserId.first()
+        val currentUserId = sessionManager.currentUserId.first() ?: "local-listener"
         if (currentUserId.isNullOrBlank()) return
 
         val existingSong = songDao.getSongById(song.id)
@@ -231,6 +243,7 @@ class SongRepositoryImpl @Inject constructor(
             )
         )
 
+        if (song.id.startsWith("audius:") || currentUserId == "local-listener") return
         try {
             val isOnline = networkMonitor.isOnline.first()
             if (isOnline) {
@@ -238,13 +251,14 @@ class SongRepositoryImpl @Inject constructor(
                 android.util.Log.d("SUPABASE_SYNC", "Play count incremented on server.")
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("SUPABASE_SYNC", "Failed to increment play count: ${e.message}")
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getSearchHistory(): Flow<List<String>> {
-        return sessionManager.currentUserId.flatMapLatest { userId ->
+        return sessionManager.currentUserId.map { it ?: "local-listener" }.flatMapLatest { userId ->
             if (userId.isNullOrBlank()) {
                 flowOf(emptyList())
             } else {
@@ -258,7 +272,7 @@ class SongRepositoryImpl @Inject constructor(
     override suspend fun saveSearchQuery(query: String) {
         if (query.isBlank()) return
 
-        val currentUserId = sessionManager.currentUserId.first()
+        val currentUserId = sessionManager.currentUserId.first() ?: "local-listener"
         if (!currentUserId.isNullOrBlank()) {
             val entity = SearchHistoryEntity(
                 userId = currentUserId,
@@ -270,26 +284,22 @@ class SongRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteSearchQuery(query: String) {
-        val currentUserId = sessionManager.currentUserId.first()
+        val currentUserId = sessionManager.currentUserId.first() ?: "local-listener"
         if (!currentUserId.isNullOrBlank()) {
             searchHistoryDao.deleteSearchQuery(currentUserId, query)
         }
     }
 
     override suspend fun clearAllSearchHistory() {
-        val currentUserId = sessionManager.currentUserId.first()
+        val currentUserId = sessionManager.currentUserId.first() ?: "local-listener"
         if (!currentUserId.isNullOrBlank()) {
             searchHistoryDao.clearAllHistoryForUser(currentUserId)
         }
     }
 
-    /**
-     * دیتای دمو سرور شامل چند ردیف تکراری برای همان آهنگ است (عنوان/خواننده
-     * یکسان، id متفاوت) — این باعث می‌شد مثلاً «Bohemian Rhapsody» دو بار در
-     * هر بخش خانه نمایش داده شود. این متد فقط اولین رخداد هر ترک را نگه می‌دارد.
-     */
+    // Provider IDs distinguish different recordings and remixes.
     private fun List<Song>.deduplicated(): List<Song> =
-        distinctBy { "${it.title.trim().lowercase()}|${it.artistName.trim().lowercase()}" }
+        distinctBy { it.id }
 
     /** فقط برای کش کاتالوگ؛ وضعیت محلی (لایک/دانلود) در DAO حفظ می‌شود */
     private fun Song.toEntity(): LocalSongEntity = LocalSongEntity(
@@ -324,7 +334,12 @@ class SongRepositoryImpl @Inject constructor(
 
     override fun getTopArtists(): Flow<List<Artist>> = kotlinx.coroutines.flow.flow {
         try {
-            val remoteArtists = songApi.getTopArtists()
+            val remoteArtists = audiusApi.trending().data.filter { it.streamable && !it.gated }
+                .groupBy { it.user.name }.map { (name, tracks) ->
+                    com.hipka.app.data.remote.dto.ArtistDto(artistName = name,
+                        totalPlayCount = tracks.sumOf { it.plays.toLong() }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                        artistImageUrl = tracks.first().artwork?.medium)
+                }.sortedByDescending { it.totalPlayCount }
             val artists = remoteArtists.map { dto ->
                 Artist(
                     name = dto.artistName,
@@ -334,6 +349,7 @@ class SongRepositoryImpl @Inject constructor(
             }
             emit(artists)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("REPO_ERROR", "Failed to fetch top artists: ${e.message}")
             emit(emptyList())
         }
@@ -341,7 +357,7 @@ class SongRepositoryImpl @Inject constructor(
 
     override suspend fun getSongsByArtist(artistName: String): List<Song> {
         return try {
-            val remoteSongs = songApi.getSongsByArtist(artistFilter = "eq.$artistName")
+            val remoteSongs = audiusApi.search(artistName).data.filter { it.user.name.equals(artistName, ignoreCase = true) }.mapNotNull { it.toSongDto() }
             remoteSongs.map { dto ->
                 Song(
                     id = dto.id,
@@ -355,6 +371,7 @@ class SongRepositoryImpl @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             emptyList()
         }
     }

@@ -95,10 +95,12 @@ class ChatRepositoryImpl @Inject constructor(
                     messageApi.sendMessage(dto)
                     messageDao.updateStatus(stuck.id, MessageStatus.SENT.name)
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     Log.e("ChatRepo", "Auto-resend failed for ${stuck.id}")
                 }
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e("ChatRepo", "Offline mode active, returning local database data.")
         }
 
@@ -131,6 +133,7 @@ class ChatRepositoryImpl @Inject constructor(
             messageDao.updateStatus(id, MessageStatus.SENT.name)
             return serverDto.toDomain()
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             // ✨ ۴. اگر نت قطع بود، ارور می‌دهد، پیام در دیتابیس همان SENDING می‌ماند
             Log.e("ChatRepo", "Network error on sendMessage: stays SENDING")
             throw e
@@ -145,7 +148,7 @@ class ChatRepositoryImpl @Inject constructor(
         }
         val collectJob = launch {
             changes.collect { action ->
-                runCatching {
+                com.hipka.app.core.util.coroutineResult {
                     val dto = action.decodeRecord<MessageDto>()
                     messageDao.insertMessage(dto.toEntity())
                     trySend(dto.toDomain())
@@ -155,7 +158,7 @@ class ChatRepositoryImpl @Inject constructor(
         channel.subscribe()
         awaitClose {
             collectJob.cancel()
-            CoroutineScope(Dispatchers.IO).launch { runCatching { channel.unsubscribe() } }
+            CoroutineScope(Dispatchers.IO).launch { com.hipka.app.core.util.coroutineResult { channel.unsubscribe() } }
         }
     }
 
@@ -170,7 +173,7 @@ class ChatRepositoryImpl @Inject constructor(
         }
         val collectJob = launch {
             changes.collect { action ->
-                runCatching {
+                com.hipka.app.core.util.coroutineResult {
                     val recordJson = action.record
                     val msgId = recordJson["id"]?.toString()?.replace("\"", "")
                     val statusStr = recordJson["status"]?.toString()?.replace("\"", "") ?: "READ"
@@ -182,7 +185,7 @@ class ChatRepositoryImpl @Inject constructor(
                         }
                     }
                 }.onFailure {
-                    runCatching {
+                    com.hipka.app.core.util.coroutineResult {
                         val fullDto = action.decodeRecord<MessageDto>()
                         messageDao.updateStatus(fullDto.id, fullDto.status)
                         trySend(fullDto.toDomain())
@@ -194,13 +197,13 @@ class ChatRepositoryImpl @Inject constructor(
         awaitClose {
             localJob.cancel()
             collectJob.cancel()
-            CoroutineScope(Dispatchers.IO).launch { runCatching { channel.unsubscribe() } }
+            CoroutineScope(Dispatchers.IO).launch { com.hipka.app.core.util.coroutineResult { channel.unsubscribe() } }
         }
     }
 
     override suspend fun markConversationAsRead(myUserId: String, peerUserId: String) {
         messageDao.updateStatusForConversation(senderId = peerUserId, receiverId = myUserId, status = MessageStatus.READ.name)
-        runCatching { messageApi.markConversationAsRead(senderIdFilter = "eq.$peerUserId", receiverIdFilter = "eq.$myUserId") }
+        com.hipka.app.core.util.coroutineResult { messageApi.markConversationAsRead(senderIdFilter = "eq.$peerUserId", receiverIdFilter = "eq.$myUserId") }
         val conversation = messageDao.getConversationOnce(myUserId, peerUserId)
         conversation.filter { it.senderId == peerUserId && it.status == MessageStatus.READ.name }
             .forEach { entity -> localStatusUpdatesFlow.emit(entity.toDomain()) }
@@ -219,7 +222,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun sendTypingStatus(myUserId: String, peerUserId: String, isTyping: Boolean) {
-        runCatching {
+        com.hipka.app.core.util.coroutineResult {
             val chName = typingChannelName(myUserId, peerUserId)
             val channel = getOrCreateTypingChannel(chName)
             val payload = TypingPayload(senderId = myUserId, isTyping = isTyping)

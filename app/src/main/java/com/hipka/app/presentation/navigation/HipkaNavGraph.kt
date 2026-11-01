@@ -94,14 +94,6 @@ fun HipkaNavGraph(
         playerViewModel.onIntent(PlayerIntent.PlayQueue(songs, startIndex))
     }
 
-    LaunchedEffect(mainUiState.isLoggedIn, mainUiState.isSessionChecked) {
-        if (mainUiState.isSessionChecked && !mainUiState.isLoggedIn) {
-            navController.navigate(Screen.Auth.route) {
-                popUpTo(0) { inclusive = true }
-            }
-        }
-    }
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -141,7 +133,7 @@ fun HipkaNavGraph(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = if (mainUiState.isLoggedIn) Screen.Home.route else Screen.Auth.route,
+            startDestination = Screen.Home.route,
             modifier = Modifier
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
@@ -225,7 +217,7 @@ fun HipkaNavGraph(
             ) { backStackEntry ->
                 val artistName = backStackEntry.arguments?.getString("artistName") ?: ""
                 val rawImageUrl = backStackEntry.arguments?.getString("imageUrl") ?: ""
-                val imageUrl = try { URLDecoder.decode(rawImageUrl, "UTF-8") } catch (e: Exception) { rawImageUrl }
+                val imageUrl = rawImageUrl.trim()
 
                 ArtistDetailScreen(
                     artistName = artistName,
@@ -259,7 +251,7 @@ fun HipkaNavGraph(
                     likedSongIds = likedSongIds,
                     onSongClick = playQueueAndTrack,
                     onLikeClick = { song -> songInteractionViewModel.toggleLike(song) },
-                    onNavigateToDiscoverUsers = { navController.navigate("followed_users/discover") }
+                    onNavigateToDiscoverUsers = { navController.navigate(if (mainUiState.isLoggedIn) "followed_users/discover" else Screen.Profile.route) }
                 )
             }
 
@@ -270,13 +262,26 @@ fun HipkaNavGraph(
             }
 
             composable(Screen.Playlists.route) {
-                PlaylistsScreen(
-                    onPlaylistClick = { _ -> }
+                com.hipka.app.presentation.features.profile.LocalLibraryScreen(
+                    onLikes = { navController.navigate(Screen.LikedSongs.route) },
+                    onRecent = { navController.navigate(Screen.RecentlyPlayed.route) },
+                    onDownloads = { navController.navigate(Screen.Downloads.route) },
+                    onSettings = { navController.navigate(Screen.Settings.route) }
                 )
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen(
+                if (!mainUiState.isLoggedIn) {
+                    com.hipka.app.presentation.features.profile.LocalLibraryScreen(
+                        onLikes = { navController.navigate(Screen.LikedSongs.route) },
+                        onRecent = { navController.navigate(Screen.RecentlyPlayed.route) },
+                        onDownloads = { navController.navigate(Screen.Downloads.route) },
+                        onSettings = { navController.navigate(Screen.Settings.route) },
+                        onLegacySignIn = if (com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) {
+                            { navController.navigate(Screen.Auth.route) }
+                        } else null
+                    )
+                } else ProfileScreen(
                     onNavigateToFollowedUsers = { type -> navController.navigate("followed_users/$type") },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
                 )
@@ -306,7 +311,8 @@ fun HipkaNavGraph(
                     onMainIntent = onMainIntent,
                     onNavigateBack = { navController.popBackStack() },
                     onLoggedOut = {
-                        navController.navigate(Screen.Auth.route) {
+                        playerViewModel.onIntent(PlayerIntent.Stop)
+                        navController.navigate(Screen.Home.route) {
                             popUpTo(0) { inclusive = true }
                         }
                     }

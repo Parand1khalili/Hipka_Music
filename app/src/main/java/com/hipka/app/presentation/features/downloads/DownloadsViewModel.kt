@@ -46,7 +46,7 @@ class DownloadsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.currentUserId.collect { userId ->
                 val premium = userId
-                    ?.let { runCatching { userRepository.getUserById(it)?.isPremium }.getOrNull() }
+                    ?.let { com.hipka.app.core.util.coroutineResult { userRepository.getUserById(it)?.isPremium }.getOrNull() }
                     ?: false
                 _state.update { it.copy(isPremium = premium) }
             }
@@ -62,7 +62,10 @@ class DownloadsViewModel @Inject constructor(
 
     private fun deleteDownload(songId: String) {
         // لیست از Room می‌آید، پس بعد از حذف خودش به‌روزرسانی می‌شود
-        viewModelScope.launch { downloadRepository.deleteDownload(songId) }
+        viewModelScope.launch {
+            com.hipka.app.core.util.coroutineResult { downloadRepository.deleteDownload(songId) }
+                .onFailure { error -> _state.update { it.copy(error = "Unable to delete download. Please try again.") } }
+        }
     }
 
     private fun changeSortOrder(sortOrder: DownloadsSortOrder) {

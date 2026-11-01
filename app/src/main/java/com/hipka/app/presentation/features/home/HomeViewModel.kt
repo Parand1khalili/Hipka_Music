@@ -50,7 +50,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun fetchUser(userId: String) {
-        val user = runCatching { userRepository.getUserById(userId) }.getOrNull()
+        val user = com.hipka.app.core.util.coroutineResult { userRepository.getUserById(userId) }.getOrNull()
         if (user != null) {
             _uiState.update { it.copy(currentUser = user) }
         }
@@ -72,9 +72,9 @@ class HomeViewModel @Inject constructor(
 
     private fun loadPlaylists() {
         viewModelScope.launch {
-            val worldPlaylists = runCatching { playlistRepository.getPlaylistsByCategory("WORLD") }
+            val worldPlaylists = com.hipka.app.core.util.coroutineResult { playlistRepository.getPlaylistsByCategory("WORLD") }
                 .getOrDefault(emptyList())
-            val localPlaylists = runCatching { playlistRepository.getPlaylistsByCategory("LOCAL") }
+            val localPlaylists = com.hipka.app.core.util.coroutineResult { playlistRepository.getPlaylistsByCategory("LOCAL") }
                 .getOrDefault(emptyList())
 
             _uiState.update {

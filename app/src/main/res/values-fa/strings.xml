@@ -6,7 +6,7 @@
     <string name="nav_home">خانه</string>
     <string name="nav_search">جستجو</string>
     <string name="nav_downloads">دانلودها</string>
-    <string name="nav_playlists">پلی‌لیست‌ها</string>
+    <string name="nav_playlists">کتابخانه</string>
     <string name="nav_profile">پروفایل</string>
 
     <!-- Settings screen -->
@@ -134,7 +134,7 @@
     <string name="downloads_count">%1$d آهنگ دانلود شده</string>
     <string name="download_cd">دانلود برای پخش آفلاین</string>
     <string name="downloaded_cd">دانلود شده</string>
-    <string name="download_premium_required">دانلود آفلاین ویژه کاربران Premium است. برای دانلود آهنگ‌ها حساب خود را ارتقاء دهید.</string>
+    <string name="download_premium_required">این آهنگ قابل دانلود نیست یا ارتباط با سرویس برقرار نشد.</string>
     <string name="download_started">دانلود شروع شد…</string>
     <string name="download_notification_channel">دانلودها</string>
     <string name="download_notification_title">در حال دانلود</string>
@@ -171,4 +171,16 @@
     <string name="auth_error_invalid_credentials">ایمیل یا رمز عبور اشتباه است</string>
     <string name="auth_username">نام کاربری</string>
     <string name="logout">خروج از حساب</string>
+    <string name="playback_failed">پخش ناموفق بود. اتصال را بررسی کرده و دوباره تلاش کنید.</string>
+    <string name="player_seek_position">موقعیت پخش</string>
+    <string name="local_library_title">کتابخانه شما</string>
+    <string name="local_library_description">علاقه‌مندی‌ها و تاریخچه پخش روی این دستگاه ذخیره می‌شوند. نیازی به حساب نیست.</string>
+    <string name="audius_source">موسیقی از Audius</string>
+    <string name="audius_description">هنرمندان مستقل را کشف کنید و موسیقی آن‌ها را بشنوید. دانلود به اجازه هنرمند بستگی دارد.</string>
+    <string name="library_favorites">آهنگ‌های مورد علاقه</string>
+    <string name="library_recent">اخیراً پخش‌شده</string>
+    <string name="library_settings">تنظیمات</string>
+    <string name="search_failed">جستجو انجام نشد. دوباره تلاش کنید.</string>
+    <string name="search_retry">تلاش دوباره</string>
+    <string name="legacy_demo_sign_in">ورود نسخه آزمایشی قدیمی</string>
 </resources>

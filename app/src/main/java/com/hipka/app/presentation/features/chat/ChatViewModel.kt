@@ -90,19 +90,19 @@ class ChatViewModel @Inject constructor(
         val myId = _uiState.value.currentUserId
         if (myId.isNotEmpty() && isTypingSignalSent) {
             viewModelScope.launch(Dispatchers.IO) {
-                runCatching { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = false) }
+                com.hipka.app.core.util.coroutineResult { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = false) }
             }
         }
     }
 
     private suspend fun loadPeer() {
-        runCatching { userRepository.getUserById(peerUserId) }
+        com.hipka.app.core.util.coroutineResult { userRepository.getUserById(peerUserId) }
             .onSuccess { user -> _uiState.update { it.copy(peerUser = user) } }
     }
 
     private suspend fun loadHistory(myId: String) {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        runCatching { chatRepository.getConversationHistory(myId, peerUserId) }
+        com.hipka.app.core.util.coroutineResult { chatRepository.getConversationHistory(myId, peerUserId) }
             .onSuccess { history ->
                 // تاریخچه بدون هیچ دستکاری خوانده می‌شود (تا پیام‌های ارسال‌نشده ساعت بمانند)
                 _uiState.update { it.copy(messages = history, isLoading = false) }
@@ -115,7 +115,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO + SupervisorJob()) {
             while (true) {
                 delay(2500)
-                runCatching { chatRepository.getConversationHistory(myId, peerUserId) }
+                com.hipka.app.core.util.coroutineResult { chatRepository.getConversationHistory(myId, peerUserId) }
                     .onSuccess { freshHistory ->
                         if (freshHistory.isNotEmpty()) {
                             _uiState.update { state ->
@@ -164,7 +164,7 @@ class ChatViewModel @Inject constructor(
 
     private fun markPeerMessagesRead(myId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { chatRepository.markConversationAsRead(myId, peerUserId) }
+            com.hipka.app.core.util.coroutineResult { chatRepository.markConversationAsRead(myId, peerUserId) }
         }
     }
 
@@ -223,7 +223,7 @@ class ChatViewModel @Inject constructor(
         if (text.isNotEmpty() && !isTypingSignalSent) {
             isTypingSignalSent = true
             viewModelScope.launch(Dispatchers.IO) {
-                runCatching { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = true) }
+                com.hipka.app.core.util.coroutineResult { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = true) }
             }
         }
 
@@ -232,7 +232,7 @@ class ChatViewModel @Inject constructor(
             delay(2000)
             if (isTypingSignalSent) {
                 isTypingSignalSent = false
-                runCatching { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = false) }
+                com.hipka.app.core.util.coroutineResult { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = false) }
             }
         }
     }
@@ -252,7 +252,7 @@ class ChatViewModel @Inject constructor(
         if (isTypingSignalSent) {
             isTypingSignalSent = false
             viewModelScope.launch(Dispatchers.IO) {
-                runCatching { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = false) }
+                com.hipka.app.core.util.coroutineResult { chatRepository.sendTypingStatus(myId, peerUserId, isTyping = false) }
             }
         }
 
@@ -276,7 +276,7 @@ class ChatViewModel @Inject constructor(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
+            com.hipka.app.core.util.coroutineResult {
                 chatRepository.sendMessage(
                     id = generatedId,
                     myUserId = myId,
@@ -321,7 +321,7 @@ class ChatViewModel @Inject constructor(
             }
 
             remainingIds.forEach { songId ->
-                runCatching { songRepository.getSongById(songId) }
+                com.hipka.app.core.util.coroutineResult { songRepository.getSongById(songId) }
                     .onSuccess { song ->
                         if (song != null) {
                             _uiState.update { it.copy(sharedSongs = it.sharedSongs + (songId to song)) }

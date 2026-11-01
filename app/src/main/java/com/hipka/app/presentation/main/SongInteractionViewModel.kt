@@ -20,6 +20,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SongInteractionViewModel @Inject constructor(
+    private val audiusApi: com.hipka.app.data.remote.api.AudiusApi,
     private val songRepository: SongRepository,
     private val downloadRepository: DownloadRepository,
     private val userRepository: UserRepository,
@@ -63,7 +64,14 @@ class SongInteractionViewModel @Inject constructor(
     fun downloadSong(song: Song) {
         viewModelScope.launch {
             // وضعیت پریمیوم در لحظه کلیک خوانده می‌شود تا اگر StateFlow هنوز مقدار نگرفته باشد اشتباه نکنیم
-            if (!sessionManager.currentUserId.first().loadPremiumStatus()) {
+            val allowed = if (song.id.startsWith("audius:")) {
+                try {
+                    val track = audiusApi.track(song.id.removePrefix("audius:")).data
+                    track != null && track.downloadable && !track.downloadGated
+                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (error: Exception) { false }
+            } else sessionManager.currentUserId.first().loadPremiumStatus()
+            if (!allowed) {
                 _premiumRequired.tryEmit(Unit)
                 return@launch
             }
@@ -74,5 +82,5 @@ class SongInteractionViewModel @Inject constructor(
     }
 
     private suspend fun String?.loadPremiumStatus(): Boolean =
-        this?.let { runCatching { userRepository.getUserById(it)?.isPremium }.getOrNull() } ?: false
+        this?.let { com.hipka.app.core.util.coroutineResult { userRepository.getUserById(it)?.isPremium }.getOrNull() } ?: false
 }

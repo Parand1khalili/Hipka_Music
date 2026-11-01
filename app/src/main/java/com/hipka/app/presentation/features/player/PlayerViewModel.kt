@@ -22,7 +22,14 @@ class PlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
-    val playbackErrors: SharedFlow<String> = playerRepository.playbackErrors
+    private val commandErrors = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val playbackErrors = kotlinx.coroutines.flow.merge(playerRepository.playbackErrors, commandErrors)
+
+    private fun launchCommand(block: suspend () -> Unit) = viewModelScope.launch {
+        try { block() }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (error: Exception) { commandErrors.emit("Unable to control playback. Please try again.") }
+    }
 
     init {
         viewModelScope.launch {
@@ -80,8 +87,7 @@ class PlayerViewModel @Inject constructor(
                 if (intent.songs.isNotEmpty()) {
                     val shuffledList = intent.songs.shuffled()
                     // پخش اولین آهنگ از لیست مخلوط شده
-                    playSong(shuffledList.first())
-                    // TODO: در صورت نیاز در اسپرینت‌های بعدی کل لیست shuffledList به صف پخش (Queue) ریپازیتوری پاس داده شود.
+                    playQueue(shuffledList, 0)
                 }
             }
             PlayerIntent.ToggleShuffle -> toggleShuffle()
@@ -93,29 +99,29 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun playSong(song: Song) {
-        viewModelScope.launch {
+        launchCommand {
             playerRepository.playSong(song)
         }
     }
 
     private fun playQueue(songs: List<Song>, startIndex: Int) {
-        viewModelScope.launch {
+        launchCommand {
             playerRepository.playQueue(songs, startIndex)
         }
     }
 
     private fun togglePlayPause() {
-        viewModelScope.launch {
-            if (_uiState.value.isPlaying) playerRepository.pause() else playerRepository.resume()
+        launchCommand {
+            if (_uiState.value.isPlaying || _uiState.value.isBuffering) playerRepository.pause() else playerRepository.resume()
         }
     }
 
     private fun stop() {
-        viewModelScope.launch { playerRepository.stop() }
+        launchCommand { playerRepository.stop() }
     }
 
     private fun toggleShuffle() {
-        viewModelScope.launch { playerRepository.setShuffleEnabled(!_uiState.value.isShuffleEnabled) }
+        launchCommand { playerRepository.setShuffleEnabled(!_uiState.value.isShuffleEnabled) }
     }
 
     private fun cycleRepeatMode() {
@@ -124,22 +130,22 @@ class PlayerViewModel @Inject constructor(
             RepeatMode.ALL -> RepeatMode.ONE
             RepeatMode.ONE -> RepeatMode.OFF
         }
-        viewModelScope.launch { playerRepository.setRepeatMode(nextMode) }
+        launchCommand { playerRepository.setRepeatMode(nextMode) }
     }
 
     private fun skipToNext() {
-        viewModelScope.launch { playerRepository.skipToNext() }
+        launchCommand { playerRepository.skipToNext() }
     }
 
     private fun skipToPrevious() {
-        viewModelScope.launch { playerRepository.skipToPrevious() }
+        launchCommand { playerRepository.skipToPrevious() }
     }
 
     private fun seekTo(positionMs: Long) {
-        viewModelScope.launch { playerRepository.seekTo(positionMs) }
+        launchCommand { playerRepository.seekTo(positionMs) }
     }
 
     private fun setPlaybackSpeed(speed: Float) {
-        viewModelScope.launch { playerRepository.setPlaybackSpeed(speed) }
+        launchCommand { playerRepository.setPlaybackSpeed(speed) }
     }
 }

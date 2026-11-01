@@ -56,7 +56,7 @@ class ProfileViewModel @Inject constructor(
 
     private suspend fun loadCurrentUser(userId: String) {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        runCatching {
+        com.hipka.app.core.util.coroutineResult {
             coroutineScope {
                 val userDeferred = async { userRepository.getUserById(userId) }
                 val followingDeferred = async { userRepository.getFollowingIds(userId) }
@@ -108,7 +108,7 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { it.copy(isUpgradingPremium = true) }
         viewModelScope.launch(Dispatchers.IO) {
             delay(1500)
-            runCatching { userRepository.setPremiumStatus(user.id, true) }
+            com.hipka.app.core.util.coroutineResult { userRepository.setPremiumStatus(user.id, true) }
                 .onSuccess {
                     _uiState.update {
                         it.copy(

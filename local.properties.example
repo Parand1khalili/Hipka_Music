@@ -1,0 +1,6 @@
+# Android Studio creates local.properties. Copy only the optional settings below.
+# The default Audius catalog needs none of these.
+supabase.url=https://YOUR_PROJECT.supabase.co/
+supabase.key=YOUR_PUBLIC_ANON_KEY
+# Insecure university demo only. Never enable with real user credentials.
+hipka.legacyDemoAuth=false

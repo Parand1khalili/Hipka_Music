@@ -9,7 +9,6 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.google.common.util.concurrent.MoreExecutors
 import com.hipka.app.R
 import com.hipka.app.core.network.NetworkMonitor
 import com.hipka.app.domain.model.PlaybackProgress
@@ -28,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -35,10 +35,12 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 // طول محو صدا در ابتدا/انتهای هر آهنگ (میلی‌ثانیه)
-private const val CROSSFADE_DURATION_MS = 3000L
-private const val CROSSFADE_TICK_MS = 200L
 private const val SLEEP_TIMER_TICK_MS = 1000L
 
 // خطاهای IO شبکه (کد ۲۰۰۰-۲۹۹۹) اغلب موقتی‌اند (قطعی لحظه‌ای شبکه/CDN)؛ قبل از
@@ -52,16 +54,19 @@ private const val OFFLINE_ERROR_TIMEOUT_MS = 5000L
 @Singleton
 class PlayerRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val songDao: com.hipka.app.data.local.dao.SongDao,
     private val networkMonitor: NetworkMonitor
 ) : PlayerRepository {
 
     private var mediaController: MediaController? = null
+    private val controllerMutex = Mutex()
+    private var retryJob: Job? = null
 
     // آهنگ‌های صف فعلی، برای بازیابی Song کامل هنگام تغییر آیتم در پلیر (چون MediaItem فقط metadata محدود دارد)
     private var queuedSongsById: Map<String, Song> = emptyMap()
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var crossfadeJob: Job? = null
+    private var progressJob: Job? = null
 
     private val _isPlaying = MutableStateFlow(false)
     override val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -113,7 +118,7 @@ class PlayerRepositoryImpl @Inject constructor(
     }
 
     private fun evaluateNetworkPlaybackState() {
-        if (desiredPlaying && !_isPlaying.value) {
+        if (desiredPlaying && !_isPlaying.value && _currentSong.value?.downloadedFile() == null) {
             if (!isNetworkOnline) {
                 _isBuffering.value = true
                 if (offlineWatchdogJob?.isActive != true) {
@@ -129,11 +134,22 @@ class PlayerRepositoryImpl @Inject constructor(
         } else {
             offlineWatchdogJob?.cancel()
             offlineWatchdogJob = null
-            _isBuffering.value = false
+            _isBuffering.value = mediaController?.playbackState == Player.STATE_BUFFERING
         }
     }
 
     private val playerListener = object : Player.Listener {
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            desiredPlaying = playWhenReady
+            if (!playWhenReady) retryJob?.cancel()
+            evaluateNetworkPlaybackState()
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            _isBuffering.value = playbackState == Player.STATE_BUFFERING
+            if (playbackState == Player.STATE_ENDED) desiredPlaying = false
+        }
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
             if (isPlaying) {
@@ -145,6 +161,8 @@ class PlayerRepositoryImpl @Inject constructor(
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            retryJob?.cancel()
+            _progress.value = PlaybackProgress()
             _currentSong.value = mediaItem?.mediaId?.let { queuedSongsById[it] }
             ioRetryCount = 0
             ioRetryMediaId = null
@@ -165,7 +183,7 @@ class PlayerRepositoryImpl @Inject constructor(
             // همه‌ی کدهای خطای دسته IO بین ۲۰۰۰ تا ۲۹۹۹ هستند (شبکه، HTTP، محدوده کش و ...)
             val isIoError = error.errorCode in 2000..2999
 
-            if (isIoError && currentMediaId != null) {
+            if (isIoError && currentMediaId != null && desiredPlaying) {
                 if (ioRetryMediaId != currentMediaId) {
                     ioRetryMediaId = currentMediaId
                     ioRetryCount = 0
@@ -173,8 +191,10 @@ class PlayerRepositoryImpl @Inject constructor(
 
                 if (ioRetryCount < MAX_IO_ERROR_RETRIES) {
                     ioRetryCount++
-                    repositoryScope.launch {
+                    retryJob?.cancel()
+                    retryJob = repositoryScope.launch {
                         delay(RETRY_BACKOFF_MS * ioRetryCount)
+                        if (!desiredPlaying || mediaController?.currentMediaItem?.mediaId != currentMediaId) return@launch
                         // prepare() دوباره از موقعیت فعلی لود می‌کند؛ خطاهای موقتی شبکه/CDN
                         // اغلب همین‌جا خودشان را حل می‌کنند بدون اینکه کاربر چیزی ببیند
                         mediaController?.apply {
@@ -186,35 +206,62 @@ class PlayerRepositoryImpl @Inject constructor(
                 }
             }
 
-            _playbackErrors.tryEmit(error.message ?: "Playback failed")
+            _isBuffering.value = false
+            _playbackErrors.tryEmit(context.getString(R.string.playback_failed))
         }
     }
 
-    private suspend fun controller(): MediaController {
-        mediaController?.let { return it }
-
-        val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        val future = MediaController.Builder(context, sessionToken).buildAsync()
-
-        return suspendCancellableCoroutine { continuation ->
-            future.addListener(
-                { continuation.resume(future.get()) },
-                MoreExecutors.directExecutor()
-            )
-            continuation.invokeOnCancellation { future.cancel(false) }
-        }.also {
-            it.addListener(playerListener)
-            mediaController = it
-            startPlaybackTicker(it)
+    private suspend fun controller(): MediaController = withContext(Dispatchers.Main.immediate) {
+        controllerMutex.withLock {
+            mediaController?.takeIf { it.isConnected }?.let { return@withLock it }
+            mediaController?.release()
+            val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+            val future = MediaController.Builder(context, token)
+                .setListener(object : MediaController.Listener {
+                    override fun onDisconnected(controller: MediaController) {
+                        if (mediaController !== controller) return
+                        _isPlaying.value = false
+                        _isBuffering.value = false
+                        desiredPlaying = false
+                        progressJob?.cancel()
+                        retryJob?.cancel()
+                    }
+                }).buildAsync()
+            val connected = suspendCancellableCoroutine<MediaController> { continuation ->
+                future.addListener({
+                    try {
+                        val result = future.get()
+                        if (continuation.isActive) continuation.resume(result)
+                        else result.release()
+                    } catch (error: Exception) {
+                        if (continuation.isActive) continuation.resumeWithException(error)
+                    }
+                }, androidx.core.content.ContextCompat.getMainExecutor(context))
+                continuation.invokeOnCancellation { MediaController.releaseFuture(future) }
+            }
+            connected.addListener(playerListener)
+            mediaController = connected
+            val queued = queuedSongsById.values.toList()
+            val previousSong = _currentSong.value
+            if (connected.mediaItemCount == 0 && queued.isNotEmpty() && previousSong != null) {
+                val index = queued.indexOfFirst { it.id == previousSong.id }.coerceAtLeast(0)
+                val position = _progress.value.positionMs
+                connected.setMediaItems(queued.map { it.toMediaItem() }, index, position)
+                connected.shuffleModeEnabled = _isShuffleEnabled.value
+                connected.repeatMode = _repeatMode.value.toPlayerRepeatMode()
+                connected.setPlaybackSpeed(_playbackSpeed.value)
+                connected.prepare()
+            }
+            startPlaybackTicker(connected)
+            connected
         }
     }
 
     private fun startPlaybackTicker(controller: MediaController) {
-        crossfadeJob?.cancel()
-        crossfadeJob = repositoryScope.launch {
-            while (isActive) {
-                delay(CROSSFADE_TICK_MS)
-                applyCrossfadeVolume(controller)
+        progressJob?.cancel()
+        progressJob = repositoryScope.launch {
+            while (isActive && controller.isConnected) {
+                delay(if (controller.isPlaying) 500L else 1_000L)
                 updateProgress(controller)
             }
         }
@@ -228,32 +275,6 @@ class PlayerRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun applyCrossfadeVolume(controller: MediaController) {
-        if (!controller.isPlaying) return
-
-        val duration = controller.duration
-        if (duration <= 0) return
-
-        val position = controller.currentPosition
-        val remaining = duration - position
-
-        val targetVolume = when {
-            // محو ورود: شروع هر آهنگ (از جمله اولین آهنگ صف) با صدای کم شروع و در چند ثانیه به حداکثر می‌رسد
-            position < CROSSFADE_DURATION_MS ->
-                (position.toFloat() / CROSSFADE_DURATION_MS).coerceIn(0f, 1f)
-
-            // محو خروج: فقط اگر آهنگ بعدی در صف وجود دارد، صدا در ثانیه‌های پایانی کم می‌شود
-            remaining < CROSSFADE_DURATION_MS && controller.hasNextMediaItem() ->
-                (remaining.toFloat() / CROSSFADE_DURATION_MS).coerceIn(0f, 1f)
-
-            else -> 1f
-        }
-
-        if (controller.volume != targetVolume) {
-            controller.volume = targetVolume
-        }
-    }
-
     override suspend fun playSong(song: Song) {
         playQueue(listOf(song), 0)
     }
@@ -261,33 +282,47 @@ class PlayerRepositoryImpl @Inject constructor(
     override suspend fun playQueue(songs: List<Song>, startIndex: Int) {
         if (songs.isEmpty()) return
 
-        queuedSongsById = songs.associateBy { it.id }
+        retryJob?.cancel()
+        val localDownloads = songDao.getDownloadedSongs().first().associateBy { it.id }
+        val playableSongs = songs.map { song ->
+            val local = localDownloads[song.id]
+            song.copy(isDownloaded = local?.isDownloaded ?: song.isDownloaded,
+                localFilePath = local?.localFilePath ?: song.localFilePath)
+        }
+        queuedSongsById = playableSongs.associateBy { it.id }
         val safeStartIndex = startIndex.coerceIn(songs.indices)
 
         desiredPlaying = true
         controller().apply {
-            volume = 0f
-            setMediaItems(songs.map { it.toMediaItem() }, safeStartIndex, 0L)
+            volume = 1f
+            setMediaItems(playableSongs.map { it.toMediaItem() }, safeStartIndex, 0L)
             prepare()
             play()
         }
-        _currentSong.value = songs[safeStartIndex]
+        _currentSong.value = playableSongs[safeStartIndex]
         evaluateNetworkPlaybackState()
     }
 
     override suspend fun pause() {
         desiredPlaying = false
+        retryJob?.cancel()
         controller().pause()
         evaluateNetworkPlaybackState()
     }
 
     override suspend fun resume() {
         desiredPlaying = true
-        controller().play()
+        controller().apply {
+            if (playbackState == Player.STATE_IDLE) prepare()
+            if (playbackState == Player.STATE_ENDED) seekToDefaultPosition()
+            play()
+        }
         evaluateNetworkPlaybackState()
     }
 
     override suspend fun stop() {
+        retryJob?.cancel()
+        cancelSleepTimer()
         desiredPlaying = false
         offlineWatchdogJob?.cancel()
         offlineWatchdogJob = null
@@ -295,6 +330,10 @@ class PlayerRepositoryImpl @Inject constructor(
             stop()
             clearMediaItems()
         }
+        progressJob?.cancel()
+        mediaController?.removeListener(playerListener)
+        mediaController?.release()
+        mediaController = null
         queuedSongsById = emptyMap()
         _currentSong.value = null
         _isPlaying.value = false
@@ -312,18 +351,19 @@ class PlayerRepositoryImpl @Inject constructor(
 
     override suspend fun seekTo(positionMs: Long) {
         val controller = controller()
-        controller.seekTo(positionMs)
+        controller.seekTo(positionMs.coerceIn(0L, controller.duration.coerceAtLeast(0L)))
         updateProgress(controller)
     }
 
     override fun startSleepTimer(durationMs: Long) {
         sleepTimerJob?.cancel()
         sleepTimerJob = repositoryScope.launch {
-            var remaining = durationMs
+            val deadline = android.os.SystemClock.elapsedRealtime() + durationMs.coerceIn(0L, 24 * 60 * 60_000L)
+            var remaining = (deadline - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0)
             _sleepTimerRemainingMs.value = remaining
             while (remaining > 0) {
-                delay(SLEEP_TIMER_TICK_MS)
-                remaining = (remaining - SLEEP_TIMER_TICK_MS).coerceAtLeast(0)
+                delay(minOf(SLEEP_TIMER_TICK_MS, remaining))
+                remaining = (deadline - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0)
                 _sleepTimerRemainingMs.value = remaining
             }
             pause()
@@ -338,6 +378,7 @@ class PlayerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setPlaybackSpeed(speed: Float) {
+        require(speed.isFinite() && speed in 0.25f..3f)
         controller().setPlaybackSpeed(speed)
         _playbackSpeed.value = speed
     }
@@ -374,9 +415,7 @@ private fun Song.toMediaItem(): MediaItem {
 
     // پخش هوشمند: اگر فایل آفلاین آهنگ دانلود شده باشد، به جای مصرف اینترنت
     // مستقیماً از روی فایل لوکال پخش می‌شود
-    val playbackUri = localFilePath
-        ?.takeIf { isDownloaded && File(it).exists() }
-        ?.let { Uri.fromFile(File(it)) }
+    val playbackUri = downloadedFile()?.let(Uri::fromFile)
         ?: Uri.parse(audioUrl)
 
     return MediaItem.Builder()

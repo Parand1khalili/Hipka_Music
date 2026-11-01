@@ -18,96 +18,112 @@ import com.hipka.app.di.DownloadHttpClient
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 
-/**
- * دانلود فایل صوتی یک آهنگ در پس‌زمینه. طبق مستندات پروژه، فرآیند دانلود به
- * WorkManager سپرده می‌شود تا با بسته شدن اپ ادامه پیدا کند و در صورت قطع شدن
- * اینترنت دوباره تلاش شود (Result.retry).
- *
- * برای بازخورد به کاربر، یک نوتیفیکیشن پیشرفت نمایش داده می‌شود. عمداً از
- * setForeground استفاده نمی‌کنیم چون اجرای Foreground Service از پس‌زمینه در
- * اندروید ۱۲+ محدودیت‌های سختی دارد و می‌تواند باعث کرش شود؛ نوتیفیکیشن ساده
- * همان بازخورد را بدون آن ریسک می‌دهد.
- */
+/** Bounded, retryable downloads; only complete private files become available offline. */
 @HiltWorker
 class DownloadWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val songDao: SongDao,
+    private val audiusApi: com.hipka.app.data.remote.api.AudiusApi,
     @DownloadHttpClient private val okHttpClient: OkHttpClient
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val songId = inputData.getString(KEY_SONG_ID) ?: return@withContext Result.failure()
         val audioUrl = inputData.getString(KEY_AUDIO_URL) ?: return@withContext Result.failure()
-        val songTitle = inputData.getString(KEY_SONG_TITLE).orEmpty()
-
+        val title = inputData.getString(KEY_SONG_TITLE).orEmpty()
         val notificationId = songId.hashCode()
-        showProgressNotification(notificationId, songTitle, progress = 0, indeterminate = true)
-
-        val downloadsDir = File(applicationContext.filesDir, DOWNLOADS_DIR_NAME).apply { mkdirs() }
-        val targetFile = File(downloadsDir, "$songId.mp3")
-
+        val directory = File(applicationContext.filesDir, DOWNLOADS_DIR_NAME).apply { mkdirs() }
+        // Provider IDs are untrusted. A digest cannot escape the private download directory.
+        val fileName = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(songId.toByteArray()).joinToString("") { "%02x".format(it) }
+        val target = File(directory, "$fileName.audio")
+        val partial = File(directory, "$fileName.$id.part")
+        var call: okhttp3.Call? = null
+        var finished = false
+        fun finish(titleRes: Int) {
+            finished = true
+            showFinishedNotification(notificationId, titleRes, title)
+        }
         try {
-            val request = Request.Builder().url(audioUrl).build()
-            okHttpClient.newCall(request).execute().use { response ->
+            val downloadUrl = if (songId.startsWith("audius:")) {
+                val trackId = songId.removePrefix("audius:")
+                val track = audiusApi.track(trackId).data
+                if (track == null || !track.downloadable || track.downloadGated) return@withContext Result.failure()
+                "https://api.audius.co/v1/tracks/$trackId/download?app_name=HipkaMusic"
+            } else audioUrl
+            require(downloadUrl.startsWith("https://"))
+            showProgressNotification(notificationId, title, 0, true)
+            call = okHttpClient.newCall(Request.Builder().url(downloadUrl).header("User-Agent", "HipkaMusic/1.0").build())
+            call.execute().use { response ->
                 if (!response.isSuccessful) {
-                    // خطای سمت سرور (مثل 403/404) با تلاش مجدد درست نمی‌شود
-                    showFinishedNotification(notificationId, R.string.download_failed, songTitle)
+                    if ((response.code == 429 || response.code >= 500) && runAttemptCount < MAX_ATTEMPTS - 1) {
+                        return@withContext Result.retry()
+                    }
+                    finish(R.string.download_failed)
                     return@withContext Result.failure()
                 }
-
-                val body = response.body ?: run {
-                    showFinishedNotification(notificationId, R.string.download_failed, songTitle)
-                    return@withContext Result.failure()
-                }
-
-                val totalBytes = body.contentLength()
-                var downloadedBytes = 0L
-                var lastReportedProgress = 0
-
-                targetFile.outputStream().use { output ->
+                val body = response.body ?: return@withContext Result.failure()
+                val type = body.contentType()
+                require(type?.type != "text" && type?.subtype?.contains("json") != true) { "Expected audio response" }
+                val length = body.contentLength()
+                require(length <= MAX_DOWNLOAD_BYTES) { "Download too large" }
+                var count = 0L
+                var reported = 0
+                partial.outputStream().use { output ->
                     body.byteStream().use { input ->
                         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                         while (true) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
                             val read = input.read(buffer)
                             if (read == -1) break
+                            count += read
+                            require(count <= MAX_DOWNLOAD_BYTES) { "Download too large" }
                             output.write(buffer, 0, read)
-                            downloadedBytes += read
-
-                            if (totalBytes > 0) {
-                                val progress = ((downloadedBytes * 100) / totalBytes).toInt()
-                                // فقط در تغییرات محسوس نوتیفیکیشن را به‌روزرسانی می‌کنیم
-                                if (progress >= lastReportedProgress + PROGRESS_STEP) {
-                                    lastReportedProgress = progress
-                                    showProgressNotification(notificationId, songTitle, progress, indeterminate = false)
+                            if (length > 0) {
+                                val progress = (count * 100 / length).toInt().coerceIn(0, 100)
+                                if (progress >= reported + PROGRESS_STEP) {
+                                    reported = progress
+                                    showProgressNotification(notificationId, title, progress, false)
                                 }
                             }
                         }
                     }
                 }
+                check(count > 0 && (length < 0 || count == length)) { "Incomplete download" }
             }
-
-            songDao.updateDownloadStatus(
-                songId = songId,
-                isDownloaded = true,
-                localFilePath = targetFile.absolutePath
-            )
-            showFinishedNotification(notificationId, R.string.download_complete, songTitle)
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            check(partial.renameTo(target)) { "Cannot finalize download" }
+            songDao.insertSongsIfAbsent(listOf(com.hipka.app.data.local.entity.LocalSongEntity(
+                id = songId, title = title, artistName = inputData.getString("artist").orEmpty(),
+                coverImageUrl = inputData.getString("cover").orEmpty(), audioUrl = audioUrl,
+                playCount = 0, releaseDate = "", isLiked = false, likesCount = 0,
+                isDownloaded = false, localFilePath = null
+            )))
+            songDao.updateDownloadStatus(songId, true, target.absolutePath)
+            finish(R.string.download_complete)
             Result.success()
-        } catch (e: Exception) {
-            // فایل ناقص را پاک می‌کنیم تا در تلاش بعدی از ابتدا دانلود شود
-            targetFile.delete()
-            if (runAttemptCount >= MAX_ATTEMPTS) {
-                showFinishedNotification(notificationId, R.string.download_failed, songTitle)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            call?.cancel()
+            throw cancelled
+        } catch (error: java.io.IOException) {
+            if (runAttemptCount < MAX_ATTEMPTS - 1) Result.retry() else {
+                finish(R.string.download_failed)
                 Result.failure()
-            } else {
-                Result.retry()
             }
+        } catch (error: Exception) {
+            finish(R.string.download_failed)
+            Result.failure()
+        } finally {
+            partial.delete()
+            // Never leave a permanent ongoing notification after cancellation or retry.
+            if (!finished) androidx.core.app.NotificationManagerCompat.from(applicationContext).cancel(notificationId)
         }
     }
 
@@ -188,5 +204,6 @@ class DownloadWorker @AssistedInject constructor(
         private const val CHANNEL_ID = "hipka_downloads"
         private const val PROGRESS_STEP = 5
         private const val MAX_ATTEMPTS = 3
+        private const val MAX_DOWNLOAD_BYTES = 250L * 1024 * 1024
     }
 }

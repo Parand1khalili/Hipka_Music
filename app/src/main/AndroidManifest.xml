@@ -4,6 +4,8 @@
 
     <!-- دسترسی حیاتی برای استریم موزیک و سوکت چت -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- پخش موزیک در پس‌زمینه به صورت Foreground Service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -11,13 +13,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- دسترسی‌های موقت برای رفع باگ صدای بلوتوث در گوشی سامسونگ -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
         android:name=".HipkaApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"

@@ -6,7 +6,7 @@
     <string name="nav_home">Home</string>
     <string name="nav_search">Search</string>
     <string name="nav_downloads">Downloads</string>
-    <string name="nav_playlists">Playlists</string>
+    <string name="nav_playlists">Library</string>
     <string name="nav_profile">Profile</string>
 
     <!-- Settings screen -->
@@ -134,7 +134,7 @@
     <string name="downloads_count">%1$d downloaded</string>
     <string name="download_cd">Download for offline</string>
     <string name="downloaded_cd">Downloaded</string>
-    <string name="download_premium_required">Offline download is a Premium feature. Upgrade your account to download songs.</string>
+    <string name="download_premium_required">This track is not available for download, or the provider could not be reached.</string>
     <string name="download_started">Download started…</string>
     <string name="download_notification_channel">Downloads</string>
     <string name="download_notification_title">Downloading</string>
@@ -170,4 +170,16 @@
     <string name="auth_error_invalid_credentials">Invalid email or password</string>
     <string name="auth_username">Username</string>
     <string name="logout">Log Out</string>
+    <string name="playback_failed">Playback failed. Check your connection and try again.</string>
+    <string name="player_seek_position">Playback position</string>
+    <string name="local_library_title">Your library</string>
+    <string name="local_library_description">Favorites and listening history stay on this device. No account needed.</string>
+    <string name="audius_source">Music from Audius</string>
+    <string name="audius_description">Discover independent artists and stream their music. Downloads depend on artist permissions.</string>
+    <string name="library_favorites">Favorite songs</string>
+    <string name="library_recent">Recently played</string>
+    <string name="library_settings">Settings</string>
+    <string name="search_failed">Search could not be completed. Please try again.</string>
+    <string name="search_retry">Try again</string>
+    <string name="legacy_demo_sign_in">Legacy demo sign-in</string>
 </resources>

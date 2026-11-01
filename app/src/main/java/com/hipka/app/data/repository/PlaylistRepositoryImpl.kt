@@ -11,8 +11,8 @@ class PlaylistRepositoryImpl @Inject constructor(
 ) : PlaylistRepository {
 
     override suspend fun getPlaylistsByCategory(category: String): List<Playlist> =
-        playlistApi.getPlaylistsByCategory(categoryFilter = "ilike.$category").map { it.toDomain() }
+        if (com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) playlistApi.getPlaylistsByCategory(categoryFilter = "ilike.$category").map { it.toDomain() } else emptyList()
 
     override suspend fun getUserPlaylists(ownerId: String): List<Playlist> =
-        playlistApi.getUserPlaylists(ownerIdFilter = "eq.$ownerId").map { it.toDomain() }
+        if (com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) playlistApi.getUserPlaylists(ownerIdFilter = "eq.$ownerId").map { it.toDomain() } else emptyList()
 }

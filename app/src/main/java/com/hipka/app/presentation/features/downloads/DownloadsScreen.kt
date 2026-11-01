@@ -33,7 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +53,7 @@ fun DownloadsScreen(
     onSongClick: (List<Song>, Song) -> Unit,
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         CenterAlignedTopAppBar(
@@ -79,9 +79,6 @@ fun DownloadsScreen(
                 )
 
                 // کاربر عادی بدون دانلود: به جای حالت خالی عمومی، دلیل واقعی را توضیح می‌دهیم
-                state.songs.isEmpty() && !state.isPremium ->
-                    PremiumOnlyDownloadsState(modifier = Modifier.align(Alignment.Center))
-
                 state.songs.isEmpty() -> EmptyDownloadsState(modifier = Modifier.align(Alignment.Center))
 
                 else -> LazyColumn(

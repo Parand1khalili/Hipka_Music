@@ -27,7 +27,10 @@ class DownloadRepositoryImpl @Inject constructor(
     private val workManager = WorkManager.getInstance(context)
 
     override fun getDownloadedSongs(): Flow<List<Song>> =
-        songDao.getDownloadedSongs().map { entities -> entities.map { it.toDomain() } }
+        songDao.getDownloadedSongs().map { entities ->
+            entities.filter { it.localFilePath?.let { path -> File(path).isFile && File(path).length() > 0 } == true }
+                .map { it.toDomain() }
+        }
 
     override fun getDownloadedSongIds(): Flow<List<String>> = songDao.getDownloadedSongIds()
 
@@ -37,7 +40,9 @@ class DownloadRepositoryImpl @Inject constructor(
                 workDataOf(
                     DownloadWorker.KEY_SONG_ID to song.id,
                     DownloadWorker.KEY_AUDIO_URL to song.audioUrl,
-                    DownloadWorker.KEY_SONG_TITLE to song.title
+                    DownloadWorker.KEY_SONG_TITLE to song.title,
+                    "artist" to song.artistName,
+                    "cover" to song.coverImageUrl
                 )
             )
             // بدون اینترنت اصلاً شروع نمی‌شود و به محض وصل شدن خودکار اجرا می‌شود
@@ -57,10 +62,16 @@ class DownloadRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteDownload(songId: String) {
-        workManager.cancelUniqueWork(downloadWorkName(songId))
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            workManager.cancelUniqueWork(downloadWorkName(songId)).result.get()
+        }
 
         songDao.getSongById(songId)?.localFilePath?.let { path ->
-            File(path).delete()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val file = File(path).canonicalFile
+                val directory = File(context.filesDir, DownloadWorker.DOWNLOADS_DIR_NAME).canonicalFile
+                if (file.parentFile == directory && file.exists()) check(file.delete()) { "Cannot remove download" }
+            }
         }
         songDao.updateDownloadStatus(songId = songId, isDownloaded = false, localFilePath = null)
     }

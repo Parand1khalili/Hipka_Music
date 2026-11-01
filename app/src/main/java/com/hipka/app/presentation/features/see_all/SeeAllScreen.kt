@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +37,7 @@ fun SeeAllScreen(
     modifier: Modifier = Modifier,
     viewModel: SeeAllViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // تعیین عنوان اولیه بر اساس آرگومان (تا زمانی که داتا لود شود و از सक्सेस بیاید)
     val fallbackTitle = when (sectionName) {

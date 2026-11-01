@@ -23,7 +23,7 @@ class SessionManager @Inject constructor(
     }
 
     val currentUserId: Flow<String?> =
-        context.sessionDataStore.data.map { it[Keys.CURRENT_USER_ID] }
+        context.sessionDataStore.data.map { if (com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) it[Keys.CURRENT_USER_ID] else null }
 
     val isLoggedIn: Flow<Boolean> =
         currentUserId.map { !it.isNullOrBlank() }

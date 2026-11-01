@@ -33,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton // ویژگی کیانا: ایمپورت دکمه اوت‌لایند
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -118,7 +119,7 @@ fun SearchScreen(
         }
 
         // ویژگی کیانا: دکمه شیک پیدا کردن دوستان فقط زمانی که باکس سرچ خالی است نمایش داده می‌شود
-        if (uiState.searchQuery.isEmpty()) {
+        if (uiState.searchQuery.isEmpty() && com.hipka.app.BuildConfig.LEGACY_DEMO_AUTH) {
             Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
             OutlinedButton(
                 onClick = onNavigateToDiscoverUsers,
@@ -138,6 +139,14 @@ fun SearchScreen(
         Spacer(modifier = Modifier.height(HipkaTheme.dimens.spaceS))
 
         when {
+            uiState.errorMessage != null -> {
+                Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.search_failed), color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = { viewModel.onIntent(SearchIntent.SearchSong(uiState.searchQuery)) }) {
+                        Text(stringResource(R.string.search_retry))
+                    }
+                }
+            }
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -176,7 +185,7 @@ fun SearchScreen(
             }
 
             // آفلاین: علت واقعی خالی بودن نتایج، نبود اینترنت است نه نبود نتیجه
-            uiState.hasSearchedBefore && uiState.isOffline -> {
+            uiState.hasSearchedBefore && uiState.isOffline && uiState.searchResults.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = stringResource(id = R.string.offline_search_unavailable),
