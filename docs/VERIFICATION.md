@@ -9,7 +9,7 @@ Date: 2026-11-01. Final local verification completed successfully.
 - Debug APK: version 1.1.0 (version code 2), minimum API 24.
 - Unit tests: 10 passed, 0 failures/errors, 0 skipped.
 - Lint: 0 errors, 57 warnings. Remaining warnings include dependency update suggestions, unused legacy resources, version-catalog/style suggestions, and the intentionally exported media service (which checks controller trust).
-- GitHub CI is configured, but its remote result is not claimed here.
+- The initial GitHub run failed before Gradle started; see the follow-up investigation below. Local results above remain separate from remote CI results.
 
 ## Executed checks
 
@@ -40,3 +40,9 @@ Date: 2026-11-01. Final local verification completed successfully.
 - Audius quotas, stream availability, and download permissions are provider-controlled. No commercial catalog completeness is promised.
 - Existing pre-v3 Room upgrades still use the original destructive fallback; a schema-history-based migration requires separate validation. Current schema version is unchanged.
 - Dependency review targeted a known Ktor advisory, not an exhaustive transitive security certification.
+
+## GitHub Actions SDK setup failure (2026-11-02)
+
+[Run 41334563231](https://github.com/Parand1khalili/Hipka_Music/actions/runs/41334563231) failed in `android-actions/setup-android@v3`. Its default `packages` input was `tools platform-tools`. The log shows successful license acceptance followed by `sdkmanager tools`, `Failed to find package 'tools'`, and exit code 1. All Gradle verification steps were skipped. This was an SDK provisioning failure, not an application compilation or test failure.
+
+The workflow now explicitly requests `platform-tools`, `platforms;android-35`, and `build-tools;35.0.0`, matching compile SDK 35 and AGP 8.9's build tools. Build, unit tests, and lint have separate named steps; test/lint counts are printed from their XML reports and included in the job summary. Application sources are unchanged by this fix. A new remote run must pass before remote verification is claimed.
