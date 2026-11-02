@@ -9,7 +9,7 @@ Date: 2026-11-01. Final local verification completed successfully.
 - Debug APK: version 1.1.0 (version code 2), minimum API 24.
 - Unit tests: 10 passed, 0 failures/errors, 0 skipped.
 - Lint: 0 errors, 57 warnings. Remaining warnings include dependency update suggestions, unused legacy resources, version-catalog/style suggestions, and the intentionally exported media service (which checks controller trust).
-- The initial GitHub run failed before Gradle started; see the follow-up investigation below. Local results above remain separate from remote CI results.
+- GitHub CI passed on 2026-11-02 after the SDK provisioning fix: [run 41395818044](https://github.com/Parand1khalili/Hipka_Music/actions/runs/41395818044). Remote lint reported 110 warnings; the local result above remains 57 warnings.
 
 ## Executed checks
 
@@ -45,4 +45,17 @@ Date: 2026-11-01. Final local verification completed successfully.
 
 [Run 41334563231](https://github.com/Parand1khalili/Hipka_Music/actions/runs/41334563231) failed in `android-actions/setup-android@v3`. Its default `packages` input was `tools platform-tools`. The log shows successful license acceptance followed by `sdkmanager tools`, `Failed to find package 'tools'`, and exit code 1. All Gradle verification steps were skipped. This was an SDK provisioning failure, not an application compilation or test failure.
 
-The workflow now explicitly requests `platform-tools`, `platforms;android-35`, and `build-tools;35.0.0`, matching compile SDK 35 and AGP 8.9's build tools. Build, unit tests, and lint have separate named steps; test/lint counts are printed from their XML reports and included in the job summary. Application sources are unchanged by this fix. A new remote run must pass before remote verification is claimed.
+The workflow now explicitly requests `platform-tools`, `platforms;android-35`, and `build-tools;35.0.0`, matching compile SDK 35 and AGP 8.9's build tools. Build, unit tests, and lint have separate named steps; test/lint counts are printed from their XML reports and included in the job summary. Application sources are unchanged by this fix. Remote verification completed successfully in [run 41395818044](https://github.com/Parand1khalili/Hipka_Music/actions/runs/41395818044), job `verify`, for commit `47e0d29d82ee9f763ec858bde50efeebb7782e3c` on `main`.
+
+Actual remote results from the job log and XML-report summary:
+
+| Check | Result |
+| --- | --- |
+| Android SDK provisioning | Passed; explicit supported packages installed, no `tools` request |
+| `:app:assembleDebug` | Passed, `BUILD SUCCESSFUL` (5m 24s) |
+| `:app:testDebugUnitTest` | Passed, 10 tests, 0 failures, 0 errors, 0 skipped (8s) |
+| `:app:lintDebug` | Passed, 0 errors, 110 warnings (1m 9s) |
+| Verification report artifact upload | Passed |
+| Overall `verify` job | Success |
+
+The remote lint count is reported as observed and does not replace the earlier Windows result. No application-source change was required for this CI fix. This documentation update records the completed run above; it does not claim results for a run that has not yet finished.
