@@ -54,6 +54,22 @@ Compose screens → ViewModels / StateFlow → repository interfaces
                                           └─ WorkManager → download worker / private files
 ```
 
+### Data and playback flow
+
+```mermaid
+flowchart TD
+    U["Compose screens / user interactions"] --> V["ViewModels and StateFlow"]
+    V --> R["Repository interfaces"]
+    R --> A["Audius API · discovery and streams"]
+    R --> D["Room · favorites and local metadata"]
+    R --> P["MediaController / MediaSessionService / ExoPlayer"]
+    R --> W["WorkManager · permitted downloads"]
+    P --> O["Audio playback and notifications"]
+    W --> L["Private files for offline access"]
+```
+
+*This architecture describes the repository's implementation paths, not an animation or simulated screenshot. See [verification notes](docs/VERIFICATION.md) for tested behaviors and outstanding manual checks.*
+
 Hilt wires dependencies. Retrofit/OkHttp and Kotlin serialization handle HTTP; the Audius client is separate from the legacy Supabase client so backend credentials are never attached to music-provider requests. Settings and optional legacy session IDs use DataStore.
 
 Source folders: `presentation` (screens/navigation/state), `domain` (models/contracts), `data` (repositories/API/Room/player/downloads), `di` (dependency wiring), and `service` (background playback).
